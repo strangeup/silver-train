@@ -6,7 +6,7 @@
 #include "generic.h"
 
 // My New code to check
-#include "C1_curved_elements.h"
+#include "C1_basis/C1_curved_elements.h"
 
 namespace oomph {
 namespace c1_curved_checks {
@@ -124,13 +124,57 @@ DenseMatrix<double> invert_two_by_two(const DenseMatrix<double>& jac)
 //#############################################################################//
 // Checker class
 //#############################################################################//
-class CurvedElementChecker : public MyC1CurvedElements::TestElement<3>
+class CurvedElementChecker : protected MyC1CurvedElements::BernadouElementBasis<3>
 
 {
 public:
-// Set edge to be two - so that no rotation etc. has to occur
-  CurvedElementChecker(const VertexList& verts, const double& su, const double&so)
-    : MyC1CurvedElements::TestElement<3>(verts,su,so) { set_edge(two);}
+/// Constructor
+  CurvedElementChecker()
+    : MyC1CurvedElements::BernadouElementBasis<3>() 
+   {/*Do nothing everything initialised on upgrade */}
+ 
+/// \short Upgrade the element.  
+/// Set edge to be two - so that no permutation  etc. has to occur
+  void upgrade_element(const VertexList& verts, const double& su, const double& so, 
+    CurvilineGeomObject& parametric_curve)
+     {
+       Parametric_curve_pt = &parametric_curve;
+       MyC1CurvedElements::BernadouElementBasis<3>::upgrade_element(verts,su,so,MyC1CurvedElements::two,parametric_curve);
+     }
+
+  /// Get position as a function of parametric coordinate, removed from final element
+  inline void chi (const double& s, Vector<double>& psi) const
+   {Parametric_curve_pt->position(Vector<double>(1,s),psi);}
+
+  /// Get position as a function of parametric coordinate, removed from final element
+  inline void d_chi (const double& s, Vector<double>& psi) const
+   {Parametric_curve_pt->dposition(Vector<double>(1,s),psi);}
+
+  /// Get position as a function of parametric coordinate, removed from final element
+  inline void d2_chi (const double& s, Vector<double>& psi) const
+   {Parametric_curve_pt->d2position(Vector<double>(1,s),psi);}
+
+  /// Get position as a function of local coordinate, removed from final element
+  inline void psi (const double& s1, Vector<double>& psi) const
+   {Parametric_curve_pt->position(Vector<double>(1,get_s_ubar()+(get_s_obar()-get_s_ubar())*s1),psi);}
+
+  /// Get position as a function of local coordinate, removed from final class
+  /// So we need it in the checking class
+  void d_psi(const double& s1, Vector<double>& dpsi) const
+   {
+    const double s=(get_s_ubar()+(get_s_obar()-get_s_ubar())*s1);
+    d_chi(s,dpsi);
+    // Now scale chi to give d_psi
+    for(unsigned i=0;i<2;++i)
+      {dpsi[i]*=(get_s_obar()-get_s_ubar());}  
+    }
+
+private:
+// New member (store the original curve)
+CurvilineGeomObject* Parametric_curve_pt;
+
+public: 
+
 //#############################################################################//
 // the element specific function definitions
 //#############################################################################//
@@ -1454,7 +1498,7 @@ void output_to_mathematica_graphics()
  {
  // Get copies of the private data
  VertexList vertices = get_vertices(); 
- double sobar(get_s_obar()), subar(get_s_ubar());
+ double sobar(BernadouElementBasis::get_s_obar()), subar(BernadouElementBasis::get_s_ubar());
 
  // Open the file
  std::ofstream some_file;
@@ -1475,7 +1519,10 @@ void output_to_mathematica_graphics()
  {
   double s = i*(sobar-subar)/20. + subar;
   // Get chi
-  Vector<double> mychi(2); chi(s,mychi);
+  Vector<double> mychi(2); 
+  // Fill in from the GeomObject
+  // chi(s,mychi);
+  Parametric_curve_pt->position(Vector<double>(1,s),mychi);
   some_file<<"{"<<std::fixed
            <<(mychi[0]) <<","<<(mychi[1]) <<"},";
  }
@@ -1486,8 +1533,11 @@ void output_to_mathematica_graphics()
  {
   double s = i*(sobar-subar)/20. + subar;
   // Get chi
-  Vector<double> mychi(2); chi(s,mychi);
-  Vector<double> myd_chi(2); d_chi(s,myd_chi);
+  Vector<double> mychi(2); 
+  //
+  Parametric_curve_pt->position(Vector<double>(1,s),mychi);
+  Vector<double> myd_chi(2); 
+  Parametric_curve_pt->dposition(Vector<double>(1,s),myd_chi);
   some_file<<"Arrow[{{"<<std::fixed
            <<(mychi[0])<<","<<(mychi[1])<<"},"
            <<"{"<<(mychi[0] -0.2*myd_chi[1])
