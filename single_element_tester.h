@@ -124,12 +124,12 @@ DenseMatrix<double> invert_two_by_two(const DenseMatrix<double>& jac)
 //#############################################################################//
 // Checker class
 //#############################################################################//
-class CurvedElementChecker : protected MyC1CurvedElements::BernadouElementBasis<3>
+class BernadouElementTestBasis : protected MyC1CurvedElements::BernadouElementBasis<3>
 
 {
 public:
 /// Constructor
-  CurvedElementChecker()
+  BernadouElementTestBasis()
     : MyC1CurvedElements::BernadouElementBasis<3>() 
    {/*Do nothing everything initialised on upgrade */}
  
@@ -334,7 +334,7 @@ void check_basic_shape(const double& tol)
     // Construct shape functions
     dfull_basis_monomials(ai[i],dp7);
  //   for(unsigned k=0;k<36;++k)
- //       std::cout<<dp7(k,0)<<" "<<dp7(k,1)<<"\n";
+ //       oomph_info<<dp7(k,0)<<" "<<dp7(k,1)<<"\n";
 
     for (unsigned j=0; j<36; ++j)
      {
@@ -361,7 +361,7 @@ void check_basic_shape(const double& tol)
     // Construct shape functions
     d2full_basis_monomials(ai[i],d2p7);
   //  for(unsigned k=0;k<36;++k)
-  //      std::cout<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
+  //      oomph_info<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
 
     for (unsigned j=0; j<36; ++j)
      {
@@ -463,16 +463,16 @@ void check_basic_shape(const double& tol)
    }
 
   //Output any non zeros
-  std::cout<<"\n";
+  oomph_info<<"\n";
   for(unsigned i=0;i<21;++i)
     for(unsigned j=0;j<21;++j)
-      std::cout<<(fabs(shape_dofs(i,j))>1e-11? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
+      oomph_info<<(fabs(shape_dofs(i,j))>1e-11? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
 
   //Output any non zeros
   for(unsigned i=0;i<36;++i)
     for(unsigned j=0;j<36;++j)
       if(std::abs(shape_dofs(i,j)-((i==j)?1.0:0.0))>tol)
-        std::cout/*<<std::scientific*/
+        oomph_info/*<<std::scientific*/
                  <<"Nonzero difference at ("<<i<<","<<j<<"): "
                  <<shape_dofs(i,j)-((i==j)?1.0:0.0)<<"\n";
 
@@ -598,26 +598,26 @@ void check_1d_hermite_shape(const double& tol)
    }
 
   // Output
-  std::cout<<"\nshape_matrix_5 should be identity matrix to machine precision:\n";
+  oomph_info<<"\nshape_matrix_5 should be identity matrix to machine precision:\n";
   for(unsigned i=0;i<6;i++)
    for(unsigned j=0;j<6;j++)
      if(std::abs(shape_matrix_5(i,j)-(i==j? 1.0 :0.0))>tol)
-      std::cout<<"shape matrix - I  nonzero at ("<<i<<","<<j<<"): "
+      oomph_info<<"shape matrix - I  nonzero at ("<<i<<","<<j<<"): "
                <<shape_matrix_5(i,j)-(i==j? 1.0 :0.0)<<"\n";
 
-  std::cout<<"\nd_shape_matrix_5 should be I3 in bottom right to machine"
+  oomph_info<<"\nd_shape_matrix_5 should be I3 in bottom right to machine"
            <<" precision:\n";
   for(unsigned i=0;i<6;i++)
     for(unsigned j=0;j<6;j++)
      if(std::abs(d_shape_matrix_5(i,j)-(i==j && j>1 ? 1.0 :0.0))>tol)
-      std::cout<<"d_shape matrix - I  nonzero at ("<<i<<","<<j<<"): "
+      oomph_info<<"d_shape matrix - I  nonzero at ("<<i<<","<<j<<"): "
                <<d_shape_matrix_5(i,j)-(i==j && j>1 ? 1.0 :0.0)<<"\n";
 
-  std::cout<<"\nshape_matrix_3 should be identity matrix to machine precision:\n";
+  oomph_info<<"\nshape_matrix_3 should be identity matrix to machine precision:\n";
   for(unsigned i=0;i<4;i++)
    for(unsigned j=0;j<4;j++)
      if(std::abs(shape_matrix_3(i,j)-(i==j? 1.0 :0.0))>tol)
-      std::cout<<"shape matrix - I  nonzero at ("<<i<<","<<j<<"): "
+      oomph_info<<"shape matrix - I  nonzero at ("<<i<<","<<j<<"): "
                <<shape_matrix_3(i,j)-(i==j? 1.0 :0.0)<<"\n";
 
   // Now check we can represent a generic degree 5 polynomial
@@ -671,12 +671,12 @@ void check_1d_hermite_shape(const double& tol)
        p3_apx+=p3_dofs[j]*psi_3[j];
      }
     if(p5_apx-p5_ex[0]>tol)
-     std::cout<<"\nNonzero diff between analytic and aprox p5:\n"
+     oomph_info<<"\nNonzero diff between analytic and aprox p5:\n"
              <<"s \t Aprox \t True \t Diff\n"
              <<s<<"\t"<<p5_apx<<"\t"<<p5_ex[0]<<"\t"<<p5_apx-p5_ex[0]<<"\n";
 
     if(p3_apx-p3_ex[0]>tol)
-     std::cout<<"\nNonzero diff between analytic and aprox p3:\n"
+     oomph_info<<"\nNonzero diff between analytic and aprox p3:\n"
              <<"s \t Aprox \t True \t Diff\n"
              <<s<<"\t"<<p3_apx<<"\t"<<p3_ex[0]<<"\t"<<p3_apx-p3_ex[0]<<"\n";
    }
@@ -690,10 +690,10 @@ DenseMatrix<double> B3 (21,9,0.0);
 basic_to_local_submatrix_3(B3);
 
 // Output
-//std::cout<<"B3:\n";
+//oomph_info<<"B3:\n";
 //for(unsigned i=0;i<21;++i)
 // for(unsigned j=0;j<9;++j)
-//   std::cout<<B3(i,j)<<(j==8?"\n":" ");
+//   oomph_info<<B3(i,j)<<(j==8?"\n":" ");
 
 // Get the d matrix
 DenseMatrix<double> d (21,21,0.0);
@@ -718,16 +718,16 @@ for(unsigned n=0;n<3;++n)
   DenseMatrix<double> Batnode(5,3,0.0);
 
 // We have checked Jacobian and Hessian
-//  std::cout<<"Jacobian: \n";
-//  std::cout<<jacobian(0,0)<<" "<<jacobian(0,1)<<"\n"
+//  oomph_info<<"Jacobian: \n";
+//  oomph_info<<jacobian(0,0)<<" "<<jacobian(0,1)<<"\n"
 //           <<jacobian(1,0)<<" "<<jacobian(1,1)<<"\n";
 
   // Get Hessian
   RankThreeTensor<double> hessian(2,2,2);
   get_basic_hessian(local_vertices[n],hessian);
 
-//  std::cout<<"Hessian:\n";
-//  std::cout<<hessian(0,0,0)<<" "<<hessian(0,0,1)<<" "<<hessian(0,1,1)<<"\n"
+//  oomph_info<<"Hessian:\n";
+//  oomph_info<<hessian(0,0,0)<<" "<<hessian(0,0,1)<<" "<<hessian(0,1,1)<<"\n"
 //           <<hessian(1,0,0)<<" "<<hessian(1,0,1)<<" "<<hessian(1,1,1)<<"\n";
 
   // Construct M (5 x 3)
@@ -772,22 +772,22 @@ for(unsigned n=0;n<3;++n)
       Datnode(2+j,4)=d(9+3*n+j,15 + n );
 
 //  //Output
-//  std::cout<<"Datnode:\n";
+//  oomph_info<<"Datnode:\n";
 //  for(unsigned i=0; i<5; ++i)
 //    for(unsigned j=0; j<5; ++j)
-//      std::cout<<Datnode(i,j)<<(j==4?"\n":" ");;
+//      oomph_info<<Datnode(i,j)<<(j==4?"\n":" ");;
 //
 //  //Output
-//  std::cout<<"Batnode:\n";
+//  oomph_info<<"Batnode:\n";
 //  for(unsigned i=0; i<5; ++i)
 //    for(unsigned j=0; j<3; ++j)
-//      std::cout<<Batnode(i,j)<<(j==2?"\n":" ");;
+//      oomph_info<<Batnode(i,j)<<(j==2?"\n":" ");;
 //
 //  // Output M - we have checked this matrix
-//  std::cout<<"M"<<n<<": \n";
+//  oomph_info<<"M"<<n<<": \n";
 //  for(unsigned i=0;i<5;++i)
 //   for(unsigned j=0;j<3;++j)
-//     std::cout<<M(i,j)<<(j==2?"\n":" ");
+//     oomph_info<<M(i,j)<<(j==2?"\n":" ");
 
 
   // Now perform the est!
@@ -803,7 +803,7 @@ for(unsigned n=0;n<3;++n)
        }
       //Output the resulting matrix
       if(std::abs(residual)>tol)
-       std::cout<<"Non zero result for test at node "<< n
+       oomph_info<<"Non zero result for test at node "<< n
                 <<" Dik Bkj element ("<<i<<","<<j<<")"
                 <<", with value : "<<residual <<"\n";
      }
@@ -874,7 +874,7 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
 
   // Report any differences
    if(std::abs(values_f1[i] - exact_values_f1[i])> tol)
-     std::cout<<"Nonzero difference for trace on side 2 (f_1):\n"
+     oomph_info<<"Nonzero difference for trace on side 2 (f_1):\n"
               <<values_f1[i] - exact_values_f1[i]<<" at "<< s<<"\n";
 
    // Do the g bit
@@ -887,7 +887,7 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
       exact_values_g1[i]+=pex[1+j]*altitude_vector_2(j);
      // Check the difference
      if(std::abs(values_g1[i] - exact_values_g1[i])> tol)
-       std::cout<<"Nonzero difference for trace on side 2 (g_1):\n"
+       oomph_info<<"Nonzero difference for trace on side 2 (g_1):\n"
                 <<values_g1[i]<< " "<<exact_values_g1[i]<<" "
                 <<values_g1[i] - exact_values_g1[i]<<" at "<< s<<"\n";
     }
@@ -915,7 +915,7 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
 
    // Report differences
    if(std::abs(values_f2[i] - exact_values_f2[i])> tol)
-     std::cout<<"Nonzero difference for trace on side 1 (f_2):\n"
+     oomph_info<<"Nonzero difference for trace on side 1 (f_2):\n"
               <<values_f2[i] - exact_values_f2[i]<<" at "<< s<<"\n";
 
    if(!ignore_g)
@@ -927,7 +927,7 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
       exact_values_g2[i]+=pex[1+j]*altitude_vector_1(j);
      // Check the difference
      if(fabs(values_g2[i] - exact_values_g2[i])> tol)
-       std::cout<<"Nonzero difference for trace on side 1 (g_2):\n"
+       oomph_info<<"Nonzero difference for trace on side 1 (g_2):\n"
                 <<values_g2[i]<< " "<<exact_values_g2[i]<<" "
                 <<values_g2[i] - exact_values_g2[i]<<" at "<< s<<"\n";
     }
@@ -952,14 +952,14 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
    exact_values_f3[i]=pex[0];
 
    if(std::abs(values_f3[i] - exact_values_f3[i])> tol)
-     std::cout<<"Nonzero difference for trace on side 1 (f_3):\n"
+     oomph_info<<"Nonzero difference for trace on side 1 (f_3):\n"
                 <<values_f3[i]<< " "<<exact_values_f3[i]<<" "
                 <<values_f3[i] - exact_values_f3[i]<<" at "<< s<<"\n";
    }
   }
  // Does it agree with our analytic function
-//  std::cout<<exact_values_g2<<"\n";
-//  std::cout<<values_g2<<"\n";
+//  oomph_info<<exact_values_g2<<"\n";
+//  oomph_info<<values_g2<<"\n";
 
 }
 
@@ -1007,7 +1007,7 @@ void check_g3_trace(const double& tol)
   for(unsigned j=0;j<21;++j)
    {
     if(std::abs(g3_exact[j]-g3[j])>0)
-      std::cout<<"Non zero difference for g3_exact at dof: "<<i
+      oomph_info<<"Non zero difference for g3_exact at dof: "<<i
                << " diff: "<<g3_exact[j]-g3[j]<<"\n";
    }
   }
@@ -1056,7 +1056,7 @@ void check_shape(const double& tol)
 //
 //   for(unsigned i=0;i<21;++i)
 //     for(unsigned l=0;l<36;++l)
-//     std::cout<<gl2basic_matrix(i,l)<<(l==35 ? "\n":" ");
+//     oomph_info<<gl2basic_matrix(i,l)<<(l==35 ? "\n":" ");
 
   // Shape function dofs
   DenseMatrix<double> shape_dofs(21,21,0.0);
@@ -1127,9 +1127,9 @@ void check_shape(const double& tol)
     // Construct shape functions
     d2full_basis_monomials(ai[i],d2p7);
     dfull_basis_monomials(ai[i],dp7);
- //   std::cout<<ai[i]<<"\n";
+ //   oomph_info<<ai[i]<<"\n";
    // for(unsigned k=0;k<36;++k)
-   //     std::cout<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
+   //     oomph_info<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
     for (unsigned j=0; j<21; ++j)
      {
       //Initialise
@@ -1156,7 +1156,7 @@ void check_shape(const double& tol)
       get_basic_hessian(ai[i],hessian);
 //      for(unsigned alpha=0;alpha<2;++alpha)
 //       for(unsigned beta =0;beta<2 ;++beta )
-//         std::cout<<"("<<hessian(alpha,beta,0)<<","<<hessian(alpha,beta,1)<<")"
+//         oomph_info<<"("<<hessian(alpha,beta,0)<<","<<hessian(alpha,beta,1)<<")"
 //                  <<(beta==1 ? "\n":" ");
       // Now invert
       inv_jacobian=invert_two_by_two(jacobian);
@@ -1172,10 +1172,10 @@ void check_shape(const double& tol)
 
 //      for(unsigned alpha=0;alpha<2;++alpha)
 //       for(unsigned beta =0;beta<2 ;++beta )
-//         std::cout<<"("<<d_inv_jac_ds(alpha,beta,0)<<","<<d_inv_jac_ds(alpha,beta,1)<<")"
+//         oomph_info<<"("<<d_inv_jac_ds(alpha,beta,0)<<","<<d_inv_jac_ds(alpha,beta,1)<<")"
 //                  <<(beta==1 ? "\n":" ");
 
-//       std::cout<<"{{"<<d2m7j_ds2(0,0)<<","<<d2m7j_ds2(0,1)<<"},"<<
+//       oomph_info<<"{{"<<d2m7j_ds2(0,0)<<","<<d2m7j_ds2(0,1)<<"},"<<
 //                   "{"<<d2m7j_ds2(1,0)<<","<<d2m7j_ds2(1,1)<<"}}\n";
        // Now find the global derivatives at local coordinates
        for(unsigned alpha=0;alpha<2;++alpha)
@@ -1193,10 +1193,10 @@ void check_shape(const double& tol)
      }
    }
 
-//  std::cout<<"The m7: \n[";
+//  oomph_info<<"The m7: \n[";
 //  for(unsigned i=0;i<36;++i)
-//      std::cout<<p7[i]<<(i==36?"]":",");
-//  std::cout<<"\n";
+//      oomph_info<<p7[i]<<(i==36?"]":",");
+//  oomph_info<<"\n";
 
   // Do the eis
   for(unsigned i=0; i<3;++i)
@@ -1220,12 +1220,12 @@ void check_shape(const double& tol)
   //Output any non zeros
   for(unsigned i=0;i<21;++i)
     for(unsigned j=0;j<21;++j)
-      std::cout<<(shape_dofs(i,j)>tol? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
+      oomph_info<<(shape_dofs(i,j)>tol? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
 
   for(unsigned i=0;i<21;++i)
     for(unsigned j=0;j<21;++j)
       if(std::abs(shape_dofs(i,j)-((i==j)?1.0:0.0))>tol)
-        std::cout/*<<std::scientific*/
+        oomph_info/*<<std::scientific*/
                  <<"Nonzero difference at ("<<i<<","<<j<<"): "
                  <<shape_dofs(i,j)-((i==j)?1.0:0.0)<<"\n";
 
@@ -1367,7 +1367,7 @@ void check_get_shape(const double& tol)
    {
     for( unsigned k=0;k<21; ++k)
      {
-       std::cout<<(fabs(shape_matrix(i,k))>tol ? shape_matrix(i,k):0.0)
+       oomph_info<<(fabs(shape_matrix(i,k))>tol ? shape_matrix(i,k):0.0)
                 <<(k==20?"\n":" ");
      }
    }
@@ -1430,7 +1430,7 @@ get_analyticfunction, const double& tol)
      f_k(s,x);
      (*get_analyticfunction)(x,w_exact);
       if( fabs(aprox_w - w_exact[0])>tol )
-        std::cout<<"Non zero difference at: "<<s<<" "<<aprox_w-w_exact[0]<<"\n";
+        oomph_info<<"Non zero difference at: "<<s<<" "<<aprox_w-w_exact[0]<<"\n";
     }
    }
 
@@ -1489,7 +1489,7 @@ get_analyticfunction, const double& tol)
        (*get_analyticfunction)(x,w_exact);
        for(unsigned i=0;i<6;++i)
         if( fabs(aprox_w[i]- w_exact[i])>tol )
-          std::cout<<"Non zero difference at: "<<i<<","<<s<<" "<<aprox_w[i]-w_exact[i]<<"\n";
+          oomph_info<<"Non zero difference at: "<<i<<","<<s<<" "<<aprox_w[i]-w_exact[i]<<"\n";
     }
    }
 }
@@ -1629,14 +1629,14 @@ void output_to_mathematica_graphics()
  some_file<<"{Point[{0,0}]}}]]"<<"\n";
 
 // // Ouput A1 A2 B1 B2
-// std::cout<<"A1:\n";
-// std::cout<<A1()<<"\n";
-// std::cout<<"A2:\n";
-// std::cout<<A2()<<"\n";
-// std::cout<<"B1:\n";
-// std::cout<<B1()<<"\n";
-// std::cout<<"B2:\n";
-// std::cout<<B2()<<"\n";
+// oomph_info<<"A1:\n";
+// oomph_info<<A1()<<"\n";
+// oomph_info<<"A2:\n";
+// oomph_info<<A2()<<"\n";
+// oomph_info<<"B1:\n";
+// oomph_info<<B1()<<"\n";
+// oomph_info<<"B2:\n";
+// oomph_info<<B2()<<"\n";
 
  // TESTS FOR FK
  some_file << "Print[\"A number of points on the reference triangle (Blue)\"]\n";
@@ -1657,11 +1657,11 @@ void output_to_mathematica_graphics()
 
  // Should be affine for vertices
  Vector<double> s(2,0.0),x(2); s[0]=1; s[1]=0; f_k(s,x);
- std::cout<<"These should be the vertices:"<<x<<"\n";
+ oomph_info<<"These should be the vertices:"<<x<<"\n";
  s[0]=0; s[1]=1; f_k(s,x);
- std::cout<<"             "<<x<<"\n";
+ oomph_info<<"             "<<x<<"\n";
  s[0]=0; s[1]=0; f_k(s,x);
- std::cout<<"             "<<x<<"\n";
+ oomph_info<<"             "<<x<<"\n";
 
  some_file << "Print[\"The same points on the curved triangle (Red)\"]\n";
  some_file << "Show[Graphics[{Red,\n";
@@ -1728,7 +1728,7 @@ void check_jacobian_and_hessian()
  DenseMatrix<double> jacobian(2,2,0.0);
  get_basic_jacobian(locus,jacobian);
   
- std::cout<<"The Jacobian entries compared to FD jacobian:\n"
+ oomph_info<<"The Jacobian entries compared to FD jacobian:\n"
           <<jacobian(0,0)-dfdx_fd4(fk1_s0,h)<<" "
           <<jacobian(0,1)-dfdx_fd4(fk1_s1,h)<<"\n"
           <<jacobian(1,0)-dfdx_fd4(fk2_s0,h)<<" "
@@ -1777,8 +1777,8 @@ void check_jacobian_and_hessian()
  // Output Hessian entries
  RankThreeTensor<double> hess(2,2,2,0);
  get_basic_hessian(locus,hess);
- std::cout<< "Hessian Entries minus finite differenced:\n";
- std::cout<< hess(0,0,0)-dfdx_fd4(J11_s0,h)<< "," 
+ oomph_info<< "Hessian Entries minus finite differenced:\n";
+ oomph_info<< hess(0,0,0)-dfdx_fd4(J11_s0,h)<< "," 
           << hess(0,1,0)-dfdx_fd4(J12_s0,h)<<"," 
           << hess(1,0,0)-dfdx_fd4(J21_s0,h)<< "," 
           << hess(1,1,0)-dfdx_fd4(J22_s0,h)<<"\n"
@@ -1791,77 +1791,77 @@ void check_jacobian_and_hessian()
 void check_constant_consistency()
  {
  // Check the consistency of the constants
- std::cout<<"\nCheck constant consistency - using defining relations (these "
+ oomph_info<<"\nCheck constant consistency - using defining relations (these "
           <<"should be zero):\n";
 
  // Check a tilde alpha
- std::cout<<"(";
+ oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- std::cout<< B2(i) - A1(i) -a_tilde_1()*A1(i)
+ oomph_info<< B2(i) - A1(i) -a_tilde_1()*A1(i)
              -a_tilde_2()*A2(i) <<(i==1? ")":","); 
- std::cout<<"\n";
+ oomph_info<<"\n";
 
  // check a tilde tilde alpha
- std::cout<<"(";
+ oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- std::cout<< -B1(i) -a_tildetilde_1()*A1(i)
+ oomph_info<< -B1(i) -a_tildetilde_1()*A1(i)
              -a_tildetilde_2()*A2(i) <<(i==1? ")":","); 
- std::cout<<"\n";
+ oomph_info<<"\n";
 
  // Check b tilde alpha
- std::cout<<"(";
+ oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- std::cout<< -B2(i) + A1(i) -b_tilde_1()*B1(i)
+ oomph_info<< -B2(i) + A1(i) -b_tilde_1()*B1(i)
              -b_tilde_2()*B2(i) <<(i==1? ")":","); 
- std::cout<<"\n";
+ oomph_info<<"\n";
 
  // check b tilde tilde alpha
- std::cout<<"(";
+ oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- std::cout<< A2(i) -b_tildetilde_1()*B1(i)
+ oomph_info<< A2(i) -b_tildetilde_1()*B1(i)
              -b_tildetilde_2()*B2(i) <<(i==1? ")":","); 
- std::cout<<"\n";
+ oomph_info<<"\n";
 
  // check c tilde alpha
- std::cout<<"(";
+ oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- std::cout<< A2(i) +c_tilde_1()*B2(i)
+ oomph_info<< A2(i) +c_tilde_1()*B2(i)
              +c_tilde_2()*A1(i) <<(i==1? ")":","); 
- std::cout<<"\n";
+ oomph_info<<"\n";
 
  // check b tilde tilde alpha
- std::cout<<"(";
+ oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- std::cout<< B1(i) +c_tildetilde_1()*B2(i)
+ oomph_info<< B1(i) +c_tildetilde_1()*B2(i)
              +c_tildetilde_2()*A1(i) <<(i==1? ")":","); 
- std::cout<<"\n";
+ oomph_info<<"\n";
 
  // Check the eccentricity parameters
  //First we check that the normals are indeed normal
- std::cout<<"\nThe altitude vectors:\n";
- std::cout<<"["<< altitude_vector_1(0)<<","<<altitude_vector_1(1)
+ oomph_info<<"\nThe altitude vectors:\n";
+ oomph_info<<"["<< altitude_vector_1(0)<<","<<altitude_vector_1(1)
           <<"]\n";
- std::cout<<"["<< altitude_vector_2(0)<<","<<altitude_vector_2(1)
+ oomph_info<<"["<< altitude_vector_2(0)<<","<<altitude_vector_2(1)
           <<"]\n";
- std::cout<<"\nThe dot products with the tangents should be zero:\n";
- std::cout<< B2(0)*altitude_vector_1(0)
+ oomph_info<<"\nThe dot products with the tangents should be zero:\n";
+ oomph_info<< B2(0)*altitude_vector_1(0)
            + B2(1)*altitude_vector_1(1)<<"\n";
- std::cout<< A1(0)*altitude_vector_2(0)
+ oomph_info<< A1(0)*altitude_vector_2(0)
            + A1(1)*altitude_vector_2(1)<<"\n";
  
- std::cout<<"\nThe altitudes:\n"
+ oomph_info<<"\nThe altitudes:\n"
           << altitude_1()<<" "<<altitude_2()<<"\n"; 
- std::cout<<"\nThe altitudes:\n";
- std::cout<<sqrt(pow(altitude_vector_1(0),2)
+ oomph_info<<"\nThe altitudes:\n";
+ oomph_info<<sqrt(pow(altitude_vector_1(0),2)
                    +pow(altitude_vector_1(1),2))<<" "
           <<sqrt(pow(altitude_vector_2(0),2)
                    +pow(altitude_vector_2(1),2))<<"\n";
- std::cout<<"Check the length is equal to the altitude vector length:\n";
- std::cout<< pow(altitude_vector_1(0),2)+pow(altitude_vector_1(1),2)
+ oomph_info<<"Check the length is equal to the altitude vector length:\n";
+ oomph_info<< pow(altitude_vector_1(0),2)+pow(altitude_vector_1(1),2)
            - pow(altitude_1(),2)<<"\n"; 
- std::cout<< pow(altitude_vector_2(0),2)+pow(altitude_vector_2(1),2)
+ oomph_info<< pow(altitude_vector_2(0),2)+pow(altitude_vector_2(1),2)
            - pow(altitude_2(),2)<<"\n"; 
- std::cout<<"Now check the eccentricity parameters (2 tests each): \n";
+ oomph_info<<"Now check the eccentricity parameters (2 tests each): \n";
 
  // The eccentricity parameter check
  {
@@ -1878,13 +1878,13 @@ void check_constant_consistency()
   // Now calculate ratio 1 and 2
   double r1(1-sqrt(A1A1/B2B2-pow(altitude_1(),2)/B2B2));
   double r2(1-sqrt(B2B2/A1A1-pow(altitude_2(),2)/A1A1));
-  std::cout<<"\nTest eta_1 (should give zeros):\n";
-  std::cout<< eta_1()-2*v2B2/B2B2+1<<"\n";
-  std::cout<< eta_1()-2*r1+1<<"\n";
+  oomph_info<<"\nTest eta_1 (should give zeros):\n";
+  oomph_info<< eta_1()-2*v2B2/B2B2+1<<"\n";
+  oomph_info<< eta_1()-2*r1+1<<"\n";
 
-  std::cout<<"\nTest eta_2 (should give zeros):\n";
-  std::cout<< eta_2()+2*v1A1/A1A1-1<<"\n";
-  std::cout<< eta_2()+2*r2-1<<"\n";
+  oomph_info<<"\nTest eta_2 (should give zeros):\n";
+  oomph_info<< eta_2()+2*v1A1/A1A1-1<<"\n";
+  oomph_info<< eta_2()+2*r2-1<<"\n";
  }
  }
 
@@ -1939,7 +1939,7 @@ void check_f3_trace(const double& tol)
   for(unsigned j=0;j<21;++j)
    {
     if(std::abs(f3_exact[j]-f3[j])>0)
-      std::cout<<"Non zero difference for f3_exact at dof: "<<j
+      oomph_info<<"Non zero difference for f3_exact at dof: "<<j
                << " diff: "<<f3_exact[j]-f3[j]<<"\n";
    }
   }

@@ -293,29 +293,18 @@ double get_s_1(const Vector<double>& x){return -x[0];};
 // Typedef
 typedef void (*Parametric_fct_pt)(const double& s, Vector<double>& v);
 
-// Helper
-void print_at_three_points(std::string fcthead, const  Parametric_fct_pt& chi_p
-  , const double& s_ubar, const double& s_obar)
-{
- Vector<double> v_l(2,0.0), v_m(2,0.0),v_u(2,0.0);
- chi_p(s_ubar,v_l);
- chi_p((s_obar+s_ubar)/2,v_m);
- chi_p(s_obar,v_u);
- // Now call the functions at 0 and 1
- std::cout << fcthead << v_l<< " ; "<< v_u 
-           << " ; "  << v_m <<"\n";
-}
 //#############################################################################//
 // Main function - performs all the tests.
 //#############################################################################//
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
+ // Use convenient namespace
  using namespace c1_curved_checks; 
- //set up
+ // Set up command line arguments
  oomph::CommandLineArgs::setup(argc,argv);
  
  // Set up the parametric function
- void (*chi_pt)(const double& s, Vector<double>& v) = &parametric_edge_quad;
- void (*d_chi_pt)(const double& s, Vector<double>& v) = &d_parametric_edge_quad;
+ CurvilineCircleTop parametric_curve;
  double s_ubar(-0.5), s_obar(0.5);
 
  // Vertices for test triangle
@@ -325,131 +314,100 @@ int main(int argc, char **argv){
  vertices[2][0] = 0.0; 
  vertices[2][1] = 0.2;
 
- // ORDER OF BOUNDARY
- const unsigned boundary_order =3;
-
- // Do all the tests - even though we expect some to fail.
- bool do_all_tests=true;
-
- std::cout<<"Vertices"<<vertices<<"\n";
-
- // Now call the functions at 0 and 1
- print_at_three_points("X0 ",&chi_0,s_ubar,s_obar);
- print_at_three_points("X0'",&d_chi_0,s_ubar,s_obar);
- print_at_three_points("X2 ",&chi_2,s_ubar,s_obar);
- print_at_three_points("X2'",&d_chi_2,s_ubar,s_obar);
- print_at_three_points("X3 ",&chi_3,s_ubar,s_obar);
- print_at_three_points("X3'",&d_chi_3,s_ubar,s_obar);
-// std::cout << "X0 "  << chi_0(s_ubar)<< " ; "<< chi_0(s_obar) 
-//           << " ; "  << chi_0((s_obar+s_ubar)/2)<<"\n";
-// std::cout << "X0'"  << d_chi_0(s_ubar)<< " ; "<< d_chi_0(s_obar)
-//           << " ; "  << d_chi_0((s_obar+s_ubar)/2)<<"\n";
-//
-// std::cout << "X2 "  << chi_2(s_ubar)<< " ; "<< chi_2(s_obar)
-//           << " ; "  << chi_2((s_obar+s_ubar)/2)<<"\n";
-// std::cout << "X2'"  << d_chi_2(s_ubar)<< " ; "<< d_chi_2(s_obar)
-//           << " ; "  << d_chi_2((s_obar+s_ubar)/2)<<"\n";
-//
-// std::cout << "X3 "  << chi_3(s_ubar)<< " ; "<< chi_3(s_obar) 
-//           << " ; "  << chi_3((s_obar+s_ubar)/2)<<"\n";
-// std::cout << "X3'"  << d_chi_3(s_ubar)<< " ; "<< d_chi_3(s_obar)
-//           << " ; "  << d_chi_3((s_obar+s_ubar)/2)<<"\n";
+ // Output the vertices
+ oomph_info<<"Vertices"<<vertices<<"\n";
 
  // Set up the problem
- CurvilineCircleTop parametric_curve;
- CurvedElementChecker test; //(vertices,s_ubar,s_obar);
- test.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
-// test.get_chi_fct_pt() = chi_pt;
-// test.get_d_chi_fct_pt() = d_chi_pt;
+ BernadouElementTestBasis bernadou_test_basis;
+ bernadou_test_basis.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
 
  // Output the element to Mathematica
- test.output_to_mathematica_graphics();
+ bernadou_test_basis.output_to_mathematica_graphics();
 
  // Do some rudimentary checks and the Jacobian and Hessian
- test.check_jacobian_and_hessian();
+ bernadou_test_basis.check_jacobian_and_hessian();
  
  // Do some checks on the constants so we know they are functioning correctly
- test.check_constant_consistency();
+ bernadou_test_basis.check_constant_consistency();
 
  // Check we get the identity matrix on this bit
- std::cout<<"\nDofs of shape functions (and dshape), should gve the identity"
+ oomph_info<<"\nDofs of shape functions (and dshape), should gve the identity"
          <<"matrix. Any difference will be recorded.";
- test.check_basic_shape(1e-12);
+ bernadou_test_basis.check_basic_shape(1e-12);
 
  // Now check the submatrix 
- test.check_b2l_submatrix_3(1e-20);
-
+ bernadou_test_basis.check_b2l_submatrix_3(1e-20);
 
  // Check 1d hermite shape functions
- test.check_1d_hermite_shape(1e-15);
+ bernadou_test_basis.check_1d_hermite_shape(1e-15);
 
  // Check traces of the shape functions
- std::cout<<"Check a radial function (p4)\n";
- test.check_traces(get_radialp4, 1e-16,false,false);
+ oomph_info<<"Check a radial function (p4)\n";
+ bernadou_test_basis.check_traces(get_radialp4, 1e-16,false,false);
 
- std::cout<<"Check a degree 5 bivariate polynomial (p5)\n";
- test.check_traces(get_p5, 1e-16,false,true);
+ oomph_info<<"Check a degree 5 bivariate polynomial (p5)\n";
+ bernadou_test_basis.check_traces(get_p5, 1e-16,false,true);
 
- std::cout<<"Check a degree 4 bivariate polynomial (p4)\n";
- test.check_traces(get_p4, 1e-16,false,false);
+ oomph_info<<"Check a degree 4 bivariate polynomial (p4)\n";
+ bernadou_test_basis.check_traces(get_p4, 1e-16,false,false);
 
- std::cout<<"Check a degree 3 bivariate polynomial (p3)\n";
- test.check_traces(get_p3, 1e-16,false,false);
+ oomph_info<<"Check a degree 3 bivariate polynomial (p3)\n";
+ bernadou_test_basis.check_traces(get_p3, 1e-16,false,false);
 
- std::cout<<"Check a degree 2 bivariate polynomial (p2)\n";
- test.check_traces(get_p2, 1e-16,false,false);
+ oomph_info<<"Check a degree 2 bivariate polynomial (p2)\n";
+ bernadou_test_basis.check_traces(get_p2, 1e-16,false,false);
 
- std::cout<<"Check a degree 1 bivariate polynomial (p1)\n";
- test.check_traces(get_p1, 1e-16,false,false);
+ oomph_info<<"Check a degree 1 bivariate polynomial (p1)\n";
+ bernadou_test_basis.check_traces(get_p1, 1e-16,false,false);
 
- std::cout<<"Check a degree 0 bivariate polynomial (p0)\n";
- test.check_traces(get_p0, 1e-16,false,false);
+ oomph_info<<"Check a degree 0 bivariate polynomial (p0)\n";
+ bernadou_test_basis.check_traces(get_p0, 1e-16,false,false);
 
  // Check g3 trace
- std::cout<<"\nCheck g3 trace:\n";
+ oomph_info<<"\nCheck g3 trace:\n";
  // This has it's own check
- test.check_g3_trace(0.0);
+ bernadou_test_basis.check_g3_trace(0.0);
 
- std::cout<<"\nCheck f3 trace:\n";
- test.check_f3_trace(0.0);
+ oomph_info<<"\nCheck f3 trace:\n";
+ bernadou_test_basis.check_f3_trace(0.0);
 
  // Check we can construct the Submatrices
- std::cout<<"\nCheck delta property:\n";
- test.check_shape(1e-16);
- std::cout<<"\nCheck interpolation of p0:\n";
- test.check_function(get_p0,1e-16);
- std::cout<<"\nCheck interpolation of p1:\n";
- test.check_function(get_p1,1e-16);
- std::cout<<"\nCheck interpolation of p2:\n";
- test.check_function(get_p2,1e-16);
- std::cout<<"\nCheck interpolation of p3:\n";
- test.check_function(get_p3,1e-16);
- std::cout<<"\nCheck interpolation of p4:\n";
- test.check_function(get_p4,1e-16);
- std::cout<<"\nCheck interpolation of radial p4:\n";
- test.check_function(get_radialp4,1e-16);
+ oomph_info<<"\nCheck delta property:\n";
+ bernadou_test_basis.check_shape(1e-16);
+ oomph_info<<"\nCheck interpolation of p0:\n";
+ bernadou_test_basis.check_function(get_p0,1e-16);
+ oomph_info<<"\nCheck interpolation of p1:\n";
+ bernadou_test_basis.check_function(get_p1,1e-16);
+ oomph_info<<"\nCheck interpolation of p2:\n";
+ bernadou_test_basis.check_function(get_p2,1e-16);
+ oomph_info<<"\nCheck interpolation of p3:\n";
+ bernadou_test_basis.check_function(get_p3,1e-16);
+ oomph_info<<"\nCheck interpolation of p4:\n";
+ bernadou_test_basis.check_function(get_p4,1e-16);
+ oomph_info<<"\nCheck interpolation of radial p4:\n";
+ bernadou_test_basis.check_function(get_radialp4,1e-16);
 
  // Check get shape
- test.check_get_shape(1e-11);
+ bernadou_test_basis.check_get_shape(1e-11);
 
  // Check we can interpolate p0 - p5
- std::cout<<"\nCheck interpolation of p0:\n";
- test.check_basis_function(get_p0,1e-16);
+ oomph_info<<"\nCheck interpolation of p0:\n";
+ bernadou_test_basis.check_basis_function(get_p0,1e-16);
 
- std::cout<<"\nCheck interpolation of p1:\n";
- test.check_basis_function(get_p1,1e-16);
+ oomph_info<<"\nCheck interpolation of p1:\n";
+ bernadou_test_basis.check_basis_function(get_p1,1e-16);
 
- std::cout<<"\nCheck interpolation of p2:\n";
- test.check_basis_function(get_p2,1e-16);
+ oomph_info<<"\nCheck interpolation of p2:\n";
+ bernadou_test_basis.check_basis_function(get_p2,1e-16);
 
- std::cout<<"\nCheck interpolation of p3:\n";
- test.check_basis_function(get_p3,1e-16);
+ oomph_info<<"\nCheck interpolation of p3:\n";
+ bernadou_test_basis.check_basis_function(get_p3,1e-16);
 
- std::cout<<"\nCheck interpolation of p4:\n";
- test.check_basis_function(get_p4,1e-16);
+ oomph_info<<"\nCheck interpolation of p4:\n";
+ bernadou_test_basis.check_basis_function(get_p4,1e-16);
 
- std::cout<<"\nCheck interpolation of radial p4:\n";
- test.check_basis_function(get_radialp4,1e-16);
+ oomph_info<<"\nCheck interpolation of radial p4:\n";
+ bernadou_test_basis.check_basis_function(get_radialp4,1e-16);
 }
 
  
