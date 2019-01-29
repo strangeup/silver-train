@@ -1849,7 +1849,7 @@ void check_constant_consistency()
  oomph_info<< A1(0)*altitude_vector_2(0)
            + A1(1)*altitude_vector_2(1)<<"\n";
  
- oomph_info<<"\nThe altitudes:\n"
+ oomph_info<<"\nThe (signed) altitudes:\n"
           << altitude_1()<<" "<<altitude_2()<<"\n"; 
  oomph_info<<"\nThe altitudes:\n";
  oomph_info<<sqrt(pow(altitude_vector_1(0),2)
@@ -1861,7 +1861,7 @@ void check_constant_consistency()
            - pow(altitude_1(),2)<<"\n"; 
  oomph_info<< pow(altitude_vector_2(0),2)+pow(altitude_vector_2(1),2)
            - pow(altitude_2(),2)<<"\n"; 
- oomph_info<<"Now check the eccentricity parameters (2 tests each): \n";
+ oomph_info<<"Now check the eccentricity parameters (3 tests each): \n";
 
  // The eccentricity parameter check
  {
@@ -1875,16 +1875,25 @@ void check_constant_consistency()
    v2B2 +=  ( B2(i)-A1(i)-altitude_vector_1(i))*B2(i);
    v1A1 +=  (-B2(i)+A1(i)-altitude_vector_2(i))*A1(i);
   }
-  // Now calculate ratio 1 and 2
-  double r1(1-sqrt(A1A1/B2B2-pow(altitude_1(),2)/B2B2));
-  double r2(1-sqrt(B2B2/A1A1-pow(altitude_2(),2)/A1A1));
+  // Run three tests on eta
   oomph_info<<"\nTest eta_1 (should give zeros):\n";
-  oomph_info<< eta_1()-2*v2B2/B2B2+1<<"\n";
-  oomph_info<< eta_1()-2*r1+1<<"\n";
+  oomph_info<< eta_1()-2.0*v2B2/B2B2+1.0<<"\n";
+  //oomph_info<< eta_1()-2*r1+1<<"\n";
+  // By pythagoras we should have:
+  // B2.B2 = h2^2 + B2.B2 ((1-eta_1)/2)^2
+  oomph_info<<pow(0.5*(1.0-eta_1()),2)*B2B2+pow(altitude_1(),2)-A1A1<<"\n";
+  // Rearrange: 
+  // n1 . B2 = 0 = -A1.B2 + 0.5*(1+eta_1) B2.B2
+  oomph_info<< eta_1()-(1-2*(A1(0)*B2(0)+A1(1)*B2(1))/(B2B2))<<"\n";
 
   oomph_info<<"\nTest eta_2 (should give zeros):\n";
   oomph_info<< eta_2()+2*v1A1/A1A1-1<<"\n";
-  oomph_info<< eta_2()+2*r2-1<<"\n";
+  // By pythagoras we should have:
+  // A1.A1 = h1^2 + B2.B2 ((1-eta_1)/2)^2
+  oomph_info<<pow(0.5*(1.0+eta_2()),2)*A1A1+pow(altitude_2(),2)-B2B2<<"\n";
+  // Rearrange: 
+  // n2 . A1 = 0 = -B2.A1 + 0.5*(1+eta_2) A1.A1
+  oomph_info<< eta_2()-(-1+2*(A1(0)*B2(0)+A1(1)*B2(1))/(A1A1))<<"\n";
  }
  }
 
