@@ -8,25 +8,226 @@
 #include "single_element_tester.h"
 
 using namespace oomph;
-
 using namespace MathematicalConstants;
 
 //#############################################################################//
 // Parametric Boundaries
 //#############################################################################//
 // Parametric function for boundary part 1
-void parametric_edge_quad(const double& s, Vector<double>& x)
-{ x[0] =-s;  x[1] =-s*s+0.75;};
-// Derivative of parametric function
-void d_parametric_edge_quad(const double& s, Vector<double>& dx)
-{ dx[0] =-1;  dx[1] =-2*s;};
 
+/// \short Specialisation of CurvilineGeomObject for half a circle.
+class CurvilineQuadratic : public CurvilineGeomObject
+{
+public:
+  /// Constructor
+  CurvilineQuadratic() {};
+
+  /// Destructor
+  ~CurvilineQuadratic() {};
+
+ /// Broken copy constructor
+ CurvilineQuadratic(const CurvilineQuadratic& dummy) 
+  { 
+   BrokenCopy::broken_copy("CurvilineQuadratic");
+  } 
+ 
+ /// Broken assignment operator
+ void operator=(const CurvilineQuadratic&) 
+  {
+   BrokenCopy::broken_assign("CurvilineQuadratic");
+  }
+ /// Parametric function
+ void position(const Vector<double>& s, Vector<double>& x) const
+ { x[0] =-s[0];  x[1] =-s[0]*s[0]+0.75;};
+ 
+ /// Derivative of parametric function
+ void dposition(const Vector<double>& s, Vector<double>& dx) const
+ { dx[0] =-1;  dx[1] =-2*s[0];};
+ 
+ /// Derivative of parametric function
+ void d2position(const Vector<double>& s, Vector<double>& dx) const 
+ { dx[0] =0;  dx[1] =-2;};
+};
+
+
+//#############################################################################//
+// Parametric Boundaries
+//#############################################################################//
+// Parametric function for boundary part 1
+
+/// \short Specialisation of CurvilineGeomObject for half a circle.
+class CurvilineCubic : public CurvilineGeomObject
+{
+public:
+  /// Constructor
+  CurvilineCubic() {};
+
+  /// Destructor
+  ~CurvilineCubic() {};
+
+ /// Broken copy constructor
+ CurvilineCubic(const CurvilineCubic& dummy) 
+  { 
+   BrokenCopy::broken_copy("CurvilineCubic");
+  } 
+ 
+ /// Broken assignment operator
+ void operator=(const CurvilineCubic&) 
+  {
+   BrokenCopy::broken_assign("CurvilineCubic");
+  }
+ /// Parametric function
+ void position(const Vector<double>& s, Vector<double>& x) const
+ { x[0] = s[0];  x[1] =s[0]*(s[0]*s[0]-1/4.)+sqrt(3)/2.;;};
+ 
+ /// Derivative of parametric function
+ void dposition(const Vector<double>& s, Vector<double>& dx) const
+ { dx[0] = 1;  dx[1] =(3.0*s[0]*s[0]-1/4.);};
+ 
+ /// Derivative of parametric function
+ void d2position(const Vector<double>& s, Vector<double>& dx) const 
+ { dx[0] =0;  dx[1] =(6.0*s[0]);};
+};
+
+/// \short Specialisation of CurvilineGeomObject for half a circle.
+class CurvilineCircleRight : public CurvilineGeomObject
+{
+public:
+ /// \short Constructor: Pass dimension of geometric object (# of Eulerian
+ /// coords = # of Lagrangian coords; no time history available/needed)
+ CurvilineCircleRight() : CurvilineGeomObject()
+  { }
+
+ /// \short Constructor: pass # of Eulerian and Lagrangian coordinates
+ /// and pointer to time-stepper which is used to handle the
+ /// position at previous timesteps and allows the evaluation
+ /// of veloc/acceleration etc. in cases where the GeomData
+ /// varies with time.
+ CurvilineCircleRight(TimeStepper* time_stepper_pt) : CurvilineGeomObject(time_stepper_pt)
+   { }
+
+ /// Broken copy constructor
+ CurvilineCircleRight(const CurvilineCircleRight& dummy) 
+  { 
+   BrokenCopy::broken_copy("CurvilineCircleRight");
+  } 
+ 
+ /// Broken assignment operator
+ void operator=(const CurvilineCircleRight&) 
+  {
+   BrokenCopy::broken_assign("CurvilineCircleRight");
+  }
+
+ /// (Empty) destructor
+ virtual ~CurvilineCircleRight(){}
+
+ /// \short Position Vector w.r.t. to zeta: 
+ virtual void position(const Vector<double>& zeta, 
+                        Vector<double> &r) const
+  { r[0] = std::cos(zeta[0]);  r[1] = std::sin(zeta[0]);}
+
+ /// \short Derivative of position Vector w.r.t. to zeta: 
+ virtual void dposition(const Vector<double>& zeta, 
+                        Vector<double> &drdzeta) const
+  { drdzeta[0] =-std::sin(zeta[0]);  drdzeta[1] = std::cos(zeta[0]);}
+
+
+ /// \short 2nd derivative of position Vector w.r.t. to coordinates: 
+ /// \f$ \frac{d^2R_i}{d \zeta_\alpha d \zeta_\beta}\f$ = 
+ /// ddrdzeta(alpha,beta,i). 
+ /// Evaluated at current time.
+ virtual void d2position(const Vector<double>& zeta, 
+                         Vector<double> &drdzeta) const
+  { drdzeta[0] =-std::cos(zeta[0]);  drdzeta[1] =-std::sin(zeta[0]);}
+
+ /// Get s from x for part 0 of the boundary (inverse mapping - for convenience)
+ double get_zeta(const Vector<double>& x)
+ {
+ // The arc length (parametric parameter) for the upper semi circular arc
+  return atan2(x[0],-x[1]);
+ }
+  
+
+};
+
+/// \short Specialisation of CurvilineGeomObject for half a circle.
+class CurvilineStraightLine : public CurvilineGeomObject
+{
+public:
+ /// \short Constructor: Pass dimension of geometric object (# of Eulerian
+ /// coords = # of Lagrangian coords; no time history available/needed)
+ CurvilineStraightLine() : CurvilineGeomObject(), Mx(0), Cx(0), My(0), Cy(0)
+  {}
+
+ /// \short Constructor: Pass dimension of geometric object (# of Eulerian
+ /// coords = # of Lagrangian coords; no time history available/needed)
+ CurvilineStraightLine(const Vector<double>& xcoeffs, const Vector<double>& ycoeffs) 
+   : CurvilineGeomObject(), Mx(xcoeffs[1]), Cx(xcoeffs[0]), My(ycoeffs[1]), Cy(ycoeffs[0])
+  {}
+
+ /// \short Constructor: pass # of Eulerian and Lagrangian coordinates
+ /// and pointer to time-stepper which is used to handle the
+ /// position at previous timesteps and allows the evaluation
+ /// of veloc/acceleration etc. in cases where the GeomData
+ /// varies with time.
+ CurvilineStraightLine(TimeStepper* time_stepper_pt) : CurvilineGeomObject(time_stepper_pt)
+   { }
+
+ /// Broken copy constructor
+ CurvilineStraightLine(const CurvilineStraightLine& dummy) 
+  { 
+   BrokenCopy::broken_copy("CurvilineStraightLine");
+  } 
+ 
+ /// Broken assignment operator
+ void operator=(const CurvilineStraightLine&) 
+  {
+   BrokenCopy::broken_assign("CurvilineStraightLine");
+  }
+
+ /// (Empty) destructor
+ virtual ~CurvilineStraightLine(){}
+
+ /// \short Position Vector w.r.t. to zeta: 
+ virtual void position(const Vector<double>& zeta, 
+                        Vector<double> &r) const
+  { r[0] = Mx * zeta[0] + Cx;  r[1] = My * zeta[0] + Cy;}
+
+ /// \short Derivative of position Vector w.r.t. to zeta: 
+ virtual void dposition(const Vector<double>& zeta, 
+                        Vector<double> &drdzeta) const
+  { drdzeta[0] = Mx;  drdzeta[1] = My;}
+
+ /// \short 2nd derivative of position Vector w.r.t. to coordinates: 
+ /// \f$ \frac{d^2R_i}{d \zeta_\alpha d \zeta_\beta}\f$ = 
+ /// ddrdzeta(alpha,beta,i). 
+ /// Evaluated at current time.
+ virtual void d2position(const Vector<double>& zeta, 
+                         Vector<double> &drdzeta) const
+  { drdzeta[0] = 0;  drdzeta[1] =0;}
+
+ /// Get s from x for part 0 of the boundary (inverse mapping - for convenience)
+ double get_zeta(const Vector<double>& x)
+ {
+ // The arc length (parametric parameter) for the upper semi circular arc
+  return (x[0]-Cx) / Mx;
+ }
+ 
+private:
+ /// The Gradient of the x component wrt to parametric coordinate
+ double Mx; 
+ /// The offset of the x component
+ double Cx; 
+ /// The Gradient of the y component wrt to parametric coordinate
+ double My; 
+ /// The offset of the x component
+ double Cy; 
+};
 // Parametric function to describe the single (straight) curved side
 void chi_0(const double& s, Vector<double>& chi)
 {
  // x equal to s
  chi[0]=s;
-
  // y equal to Sqrt[3]/2
  chi[1]=sqrt(3)/2.;
 }
@@ -35,7 +236,6 @@ void d_chi_0(const double& s, Vector<double>& d_chi)
 {
  // x equal to s
  d_chi[0]=1;
-
  // y equal to Sqrt[3]/2
  d_chi[1]=0;
 }
@@ -45,7 +245,6 @@ void chi_2(const double& s, Vector<double>& chi)
 {
  // x equal to s
  chi[0]=s;
-
  // y equal to simplest quadratic that I could think of
  chi[1]=-s*s+1/4.+sqrt(3)/2.;
 }
@@ -55,36 +254,15 @@ void d_chi_2(const double& s, Vector<double>& d_chi)
 {
  // derivative of y component 
  d_chi[0]=1;
-
  // derivative of x component
  d_chi[1]=-2*s;
 }
 
 /// Parametric function to describe the single (cubic) curved side
-void chi_circle(const double& s, Vector<double>& chi)
-{
- // x equal to s
- chi[0]=std::cos(s);
-
- // y equal to simplest cubic I could think of 
- chi[1]=std::sin(s);
-}
-
-/// Parametric function to describe the single (cubic) curved side
-void d_chi_circle(const double& s, Vector<double>& d_chi)
-{
- // x equal to s
- d_chi[0]=-std::sin(s);
-
- // y equal to simplest cubic I could think of 
- d_chi[1]= std::cos(s);
-}
-/// Parametric function to describe the single (cubic) curved side
 void chi_3(const double& s, Vector<double>& chi)
 {
  // x equal to s
  chi[0]=s;
-
  // y equal to simplest cubic I could think of 
  chi[1]=s*(s*s-1/4.)+sqrt(3)/2.;
 }
@@ -94,7 +272,6 @@ void d_chi_3(const double& s, Vector<double>& d_chi)
 {
  // x equal to s
  d_chi[0]=1;
-
  // y equal to simplest cubic I could think of 
  d_chi[1]=3*s*s-1/4.;
 }
@@ -136,6 +313,41 @@ void get_p2(const Vector<double>& x, Vector<double>& p)
  DenseMatrix<double> a(3,3,0.0);
  a(0,0)= 0.2; a(0,1)= 1.0; a(1,0)=- 0.4;
  a(1,1)= 0.2, a(2,0)=-0.9; a(0,2)=-0.1;
+
+ // Zero the vector
+ // Now loop over coefficients
+ for(unsigned i=0; i<3;++i)
+  {
+   for(unsigned j=0; j<3-i;++j)
+    {
+     // Function
+     p[0]+=a(i,j)*pow(x[0],i)*pow(x[1],j);
+     // Values
+     if(i>0)
+       p[1]+=a(i,j)*i*pow(x[0],i-1)*pow(x[1],j);
+     if(j>0)
+       p[2]+=a(i,j)*j*pow(x[0],i)*pow(x[1],j-1);
+     // Second derivatives
+     if(i>1)
+       p[3]+=a(i,j)*i*(i-1)*pow(x[0],i-2)*pow(x[1],j);
+     if(j>1)
+       p[4]+=a(i,j)*j*(j-1)*pow(x[0],i)*pow(x[1],j-2);
+     if(i>0 && j>0)
+       p[5]+=a(i,j)*j*i*pow(x[0],i-1)*pow(x[1],j-1);
+    }
+  }
+}
+
+/// P2 polynomial with coefficient a02 = 0 
+void get_special_p2(const Vector<double>& x, Vector<double>& p)
+{
+ // Copy of the position Vector
+ DenseMatrix<double> a(3,3,0.0);
+ // Generic p2 polynomial with |  (a20) equal to zero
+ //                            v
+ a(0,0)= 0.2; a(0,1)= 1.0; a(0,2)=- 0.0;
+ a(1,0)=-0.8; a(1,1)=-1.0;
+ a(2,0)= 0.4; 
 
  // Zero the vector
  // Now loop over coefficients
@@ -300,17 +512,20 @@ int main(int argc, char **argv)
 {
  // Use convenient namespace
  using namespace c1_curved_checks; 
+ feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
  // Set up command line arguments
  oomph::CommandLineArgs::setup(argc,argv);
  
  // Set up the parametric function
- CurvilineCircleTop parametric_curve;
+ // CurvilineCircleTop parametric_curve;
+ // CurvilineQuadratic parametric_curve;
+ CurvilineCubic parametric_curve;
  double s_ubar(-0.5), s_obar(0.5);
 
  // Vertices for test triangle
  Vector<Vector<double> > vertices(3,Vector<double>(2,0.0));
- (*chi_pt)(s_ubar, vertices[0]);
- (*chi_pt)(s_obar, vertices[1]);
+ parametric_curve.position(Vector<double>(1,s_ubar),vertices[0]);
+ parametric_curve.position(Vector<double>(1,s_obar),vertices[1]);
  vertices[2][0] = 0.0; 
  vertices[2][1] = 0.2;
 
@@ -390,7 +605,11 @@ int main(int argc, char **argv)
  // Check get shape
  bernadou_test_basis.check_get_shape(1e-11);
 
- // Check we can interpolate p0 - p5
+ // Check we can interpolate p0 - p2
+ // For a pn function with an mth order mapping the 'basic' representation
+ // will be a polynomial of order m * n in local coordinates
+ // Therefore for a cubic mapping we can exactly represent up to quadratic 
+ // functions, assuming we can represent the mapping exactly
  oomph_info<<"\nCheck interpolation of p0:\n";
  bernadou_test_basis.check_basis_function(get_p0,1e-16);
 
@@ -398,16 +617,17 @@ int main(int argc, char **argv)
  bernadou_test_basis.check_basis_function(get_p1,1e-16);
 
  oomph_info<<"\nCheck interpolation of p2:\n";
- bernadou_test_basis.check_basis_function(get_p2,1e-16);
+ bernadou_test_basis.check_basis_function(get_special_p2,1e-16);
 
- oomph_info<<"\nCheck interpolation of p3:\n";
- bernadou_test_basis.check_basis_function(get_p3,1e-16);
-
- oomph_info<<"\nCheck interpolation of p4:\n";
- bernadou_test_basis.check_basis_function(get_p4,1e-16);
-
- oomph_info<<"\nCheck interpolation of radial p4:\n";
- bernadou_test_basis.check_basis_function(get_radialp4,1e-16);
+ 
+//  oomph_info<<"\nCheck interpolation of p3:\n";
+//  bernadou_test_basis.check_basis_function(get_p3,1e-16);
+// 
+//  oomph_info<<"\nCheck interpolation of p4:\n";
+//  bernadou_test_basis.check_basis_function(get_p4,1e-16);
+// 
+//  oomph_info<<"\nCheck interpolation of radial p4:\n";
+//  bernadou_test_basis.check_basis_function(get_radialp4,1e-16);
 }
 
  
