@@ -146,6 +146,9 @@ public:
        MyC1CurvedElements::BernadouElementBasis<BOUNDARY_ORDER>::upgrade_element(verts,su,so,MyC1CurvedElements::two,parametric_curve);
      }
 
+  /// Fill in local dof positions
+  inline void fill_in_local_internal_dofs_position(VertexList& local_dofs_position);
+
   /// Get position as a function of parametric coordinate, removed from final element
   inline void chi (const double& s, Vector<double>& psi) const
    {Parametric_curve_pt->position(Vector<double>(1,s),psi);}
@@ -186,15 +189,13 @@ public:
 Vector<double> get_global_dofs(const ExactSolnFctPt& w)
  {
   //Initialise
-  Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),
-                          ei(this->n_internal_dofs(),Vector<double>(2,0.25)),
-                          w_at_xi(6,Vector<double> (6,0.0));
+  Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),ei,
+                          w_at_xi(3+this->n_internal_dofs(),Vector<double> (6,0.0));
   ai=this->get_vertices();
   Vector<double> gdofs(this->n_basis_functions(),0.0);
 
-  // Fill in ei HERE this will break if templated
-  ei[0][0]=0.5;
-  ei[1][1]=0.5;
+  // Get the local internal dofs
+  fill_in_local_internal_dofs_position(ei);
 
   // Get the dofs
   for (unsigned i=0; i<3; ++i)
@@ -238,15 +239,13 @@ Vector<double> get_global_dofs(const ExactSolnFctPt& w)
 Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
  {
   //Initialise
-  Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),
-                          ei(this->n_internal_dofs(),Vector<double>(2,0.25)),
+  Vector<Vector<double> > ai(3,Vector<double>(2,0.0)), ei,
                           w_at_xi(6,Vector<double> (6,0.0));
   ai=this->get_vertices();
   Vector<double> gdofs(this->n_basis_functions(),0.0);
 
-  // Fill in ei // HERE this will break templating
-  ei[0][0]=0.5;
-  ei[1][1]=0.5;
+  // Get the local internal dofs
+  fill_in_local_internal_dofs_position(ei);
 
   // Get the dofs
   for (unsigned i=0; i<3; ++i)
@@ -1095,7 +1094,6 @@ void check_shape(const double& tol)
                           ai(3,Vector<double>(2,0.0));
   Vector<double> bdofs(this->n_basic_basis_functions(),0.0);
 
-  // HERE FILL IN LOCAL DOFS TEMPLATED
   // fill in ai (local)
   ai[0][0]=1.0; ai[1][1]=1.0;
 
@@ -1324,10 +1322,10 @@ void check_get_shape(const double& tol)
   lvertices[0][0]=1.0;
   lvertices[1][1]=1.0;
 
-  // HERE TEMPLATE INITIAlISE LOCAL POINTS 
-  Vector<Vector<double> > linternpts(this->n_internal_dofs(),Vector<double>(2,0.25));
-  linternpts[0][0]=0.5;
-  linternpts[1][1]=0.5;
+
+  // Get the local internal dofs
+  Vector<Vector<double> > linternpts;
+  fill_in_local_internal_dofs_position(linternpts);
 
   DenseMatrix<double> shape_matrix(this->n_basis_functions(),this->n_basis_functions(),0.0);
 
@@ -1916,7 +1914,7 @@ void check_constant_consistency()
              +this->c_tildetilde_2()* this->A1(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
 
- // Check D1 and D2 TEMPLATE
+ // Check D1 and D2 this will work for both templates but do we want it to? HERE
  std::cout<<"Check the HIGHER ORDER constants.\n";
  // check a u_tilde alpha
  std::cout<<"(";
@@ -2121,6 +2119,38 @@ double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
 }
 };
 
+/// Specialisation 
+template<>
+void BernadouElementTestBasis<3>::fill_in_local_internal_dofs_position(VertexList& local_dofs_position)
+  {
+  // Short version using assignment (hax)
+  local_dofs_position=VertexList(this->n_internal_dofs(),Vector<double>(2,0.25));
+  // Fill in the final value 
+  local_dofs_position[0][0]=0.5;
+  local_dofs_position[1][1]=0.5;
+  }
+
+
+  // Fill in ei
+template<>
+void BernadouElementTestBasis<5>::fill_in_local_internal_dofs_position(VertexList& ei)
+  {
+  // Cheat using assignment 
+  ei=VertexList(this->n_internal_dofs(),Vector<double>(2,0.25));
+  ei[0][0]=1/6.;  ei[0][1]=2/3.;
+  ei[1][0]=1/6.;  ei[1][1]=1/2.;
+  ei[2][0]=1/6.;  ei[2][1]=1/3.;
+  ei[3][0]=1/6.;  ei[3][1]=1/6.;
+                     
+  ei[4][0]=1/3.;  ei[4][1]=1/6.;
+  ei[5][0]=1/2.;  ei[5][1]=1/6.;
+  ei[6][0]=2/3.;  ei[6][1]=1/6.;
+                     
+  ei[7][0]=1/2.;  ei[7][1]=1/3.;
+  ei[8][0]=1/3.;  ei[8][1]=1/2.;
+                     
+  ei[9][0]=1/3.;  ei[9][1]=1/3.;
+  }
 } // end c1_curved_checks namespace
 } //end namespace expansion (oomph)
 #endif // C1_CURVED_CHECKS_HEADER

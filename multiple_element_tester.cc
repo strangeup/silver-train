@@ -449,13 +449,14 @@ int main(int argc, char **argv){
    // the equilateral triangle
    double side_length = distance_between_two_points(vertices[0],vertices[1]);
    get_right_handed_equilateral_vertex(vertices[0],vertices[1],vertices[2]);
+//   get_isosceles_tip(delta_s, vertices[0],vertices[1],vertices[2]);
    // Now output
    outfile <<"Opacity[0.4],"<< color_order[iel % 7] <<",";
    output_polygon_to_mathematica(outfile,3,vertices);
    outfile <<"\n" <<(iel==nel-1?"}]":","); 
 
    // Set up the problem
-   BernadouElementTestBasis<3> test;
+   BernadouElementTestBasis<5> test;
    test.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
    //   if(iel==0)
    //    test.check_d_matrix(&get_p8);
