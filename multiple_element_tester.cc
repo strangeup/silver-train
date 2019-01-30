@@ -372,11 +372,18 @@ int main(int argc, char **argv){
  using namespace c1_curved_checks; 
  //set up
  oomph::CommandLineArgs::setup(argc,argv);
+ oomph::CommandLineArgs::specify_command_line_flag("--higher_order");
+
+ // Parse command line
+ CommandLineArgs::parse_and_assign(); 
+
+ // Higher order flag - this code is a bit dodgy
+ const bool do_higher_order = CommandLineArgs::command_line_flag_has_been_set("--higher_order");
 
  // Set up the parametric function
  CurvilineCircleRight parametric_curve;
  // Constants for the hierarchy of triangles 
- const double centre = 0.8 , s_start = 0.8;//Pi/8.;
+ const double centre = 0.8 , s_start = 0.4;//Pi/8.;
 
  // Open a mathematica module
  std::ofstream outfile;
@@ -456,23 +463,41 @@ int main(int argc, char **argv){
    outfile <<"\n" <<(iel==nel-1?"}]":","); 
 
    // Set up the problem
-   BernadouElementTestBasis<5> test;
-   test.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
+   //BernadouElementTestBasis<5> test;
    //   if(iel==0)
-   //    test.check_d_matrix(&get_p8);
+   //    test_basis_3.check_d_matrix(&get_p8);
  
     // Do some checks on the constants so we know they are functioning correctly
-    //    test.check_constant_consistency();
-    std::cout<<(iel==0?"The answer is:\n[":"")
+    //    test_basis_3.check_constant_consistency();
+    if(do_higher_order)
+    {
+     // Construct the element
+     BernadouElementTestBasis<5> test_basis_5;
+     test_basis_5.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
+     oomph_info<<(iel==0?"The answer is:\n[":"")
        //<< delta_s <<","<<
        << side_length <<","<<
-test.check_function_norm(&get_solution_and_radial_derivative) 
+          test_basis_5.check_function_norm(&get_solution_and_radial_derivative) 
        //mapping_on_trace_norm()
         <<(iel==nel-1? "]\n":";");
     // Output to trace file
     trace_file << side_length <<" "<<
-        test.check_function_norm(&get_solution_and_radial_derivative) 
+        test_basis_5.check_function_norm(&get_solution_and_radial_derivative) 
         <<(iel==nel-1? "":"\n");
+    }
+    else
+    {
+     // Construct the element
+     BernadouElementTestBasis<3> test_basis_3;
+     test_basis_3.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
+     oomph_info<<(iel==0?"The answer is:\n[":"")<< side_length <<","
+         <<test_basis_3.check_function_norm(&get_solution_and_radial_derivative) 
+         <<(iel==nel-1? "]\n":";");
+    // Output to trace file
+    trace_file << side_length <<" "
+         <<test_basis_3.check_function_norm(&get_solution_and_radial_derivative) 
+         <<(iel==nel-1? "":"\n");
+    }
   }
 
  outfile << ",\nParametricPlot[Join[chi1,chi2],{s,"<<
