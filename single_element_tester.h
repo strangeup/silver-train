@@ -1953,6 +1953,118 @@ void check_f3_trace(const double& tol)
    }
   }
 }
+
+// Return the global dofs of a function on an element
+double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
+ {
+  // Get the matrices
+  DenseMatrix<double> b_matrix (21,36,0.0);
+  DenseMatrix<double> d_matrix (21,21,0.0);
+  DenseMatrix<double> conversion_matrix (21,36,0.0);
+  DenseMatrix<double> gl2basic_matrix (21,36,0.0);
+  basic_to_local_matrix(b_matrix);
+  local_to_global_matrix(d_matrix);
+
+  //Get the dofs
+  Vector<double> dofs(21,0.0);
+  dofs=get_global_dofs(get_analyticfunction);
+
+  // Fill in conversion matrix
+  for(unsigned i=0;i<21;++i)
+   for(unsigned j=0;j<36;++j)
+     for(unsigned k=0;k<21;++k)
+        conversion_matrix(i,j)+=d_matrix(i,k)*b_matrix(k,j);
+
+ // Open octave file
+ std::ofstream some_file;
+ char filename[100];
+ sprintf(filename,"RESLT/tests.dat");
+ some_file.open(filename);
+
+ //Loop over grid points
+ const unsigned n_points=17;//13;
+ for(unsigned k=0;k<n_points;++k)
+  {
+   double s0(1.0/(n_points-1)*k);
+   for(unsigned l=0;l<n_points-k;++l)
+    {
+     double s1(1.0/(n_points-1)*l);
+     // The position on the basic element
+     Vector<double> s(2,0.0); s[0]=s0; s[1]=s1;
+
+    // Now Sum over shape functions
+    double aprox_w(0.0);
+    Shape p7 (36);
+    full_basic_polynomials(s,p7);
+
+    for(unsigned i=0;i<21;++i)
+     {
+     // Get the shape functions
+      // Loop over the conversion matrix
+      for (unsigned k=0; k<36; ++k)
+       {
+        // Sum over
+        aprox_w+=dofs[i]*conversion_matrix(i,k)*p7(k);
+       }
+     }
+
+     // Compare
+     Vector<double> w_exact(6,0.0),x(2);
+     f_k(s,x);
+     (*get_analyticfunction)(x,w_exact);
+     some_file<<s[0]<<" "<<s[1]<<" "<<w_exact[0]<<" "<<aprox_w<<" " <<
+                aprox_w - w_exact[0]<<"\n";
+    }
+   }
+ some_file.close();
+ // Create integral
+ oomph::TGauss<2,5> integral;
+ // Now get the traces at several values of s
+ const unsigned n_ipoints=integral.nweight();
+ 
+ double integrated_squared_error(0.0),integrated_area(0.0);
+ // Loop integral points
+ for(unsigned ipt=0 ; ipt< n_ipoints; ++ipt)
+  {
+   // The corresponding local coordinates
+   Vector<double> s(2,0.0);
+   s[0] = integral.knot(ipt,0);
+   s[1] = integral.knot(ipt,1);
+   // The integral weights
+   const double weight=integral.weight(ipt);
+
+   // Now Sum over shape functions
+   double aprox_w(0.0);
+   Shape p7 (36);
+   full_basic_polynomials(s,p7);
+   // Get Jacobian
+   DenseMatrix<double> jacobian(2,2,0.0);
+   get_basic_jacobian(s,jacobian);
+   // Get det
+   const double J = jacobian(0,0)*jacobian(1,1) - jacobian(0,1)*jacobian(1,0);
+
+   for(unsigned i=0;i<21;++i)
+    {
+    // Get the shape functions
+     // Loop over the conversion matrix
+     for (unsigned k=0; k<36; ++k)
+      {
+       // Sum over
+       aprox_w+=dofs[i]*conversion_matrix(i,k)*p7(k);
+      }
+    }
+
+   // Compare
+   Vector<double> w_exact(6,0.0),x(2);
+   f_k(s,x);
+   (*get_analyticfunction)(x,w_exact);
+
+   integrated_squared_error+=(w_exact[0]-aprox_w)*(w_exact[0]-aprox_w)*weight*J;
+   integrated_area+=weight*J;
+  }
+  // Return the result
+ return sqrt(integrated_squared_error/integrated_area);
+}
 };
 
 } // end c1_curved_checks namespace
