@@ -37,104 +37,6 @@ void d2_parametric_edge_quint(const double& s, Vector<double>& dx)
 //{ dx[0] =0;/*-6*s;*/  dx[1] =-s*s*s*(35*s*s - 20) ;};
 { dx[0] =0;/*-6*s;*/  dx[1] =-s*s*(20*s) + 6*s;};
 
-// Parametric function to describe the single (straight) curved side
-void chi_0(const double& s, Vector<double>& chi)
-{
- // x equal to s
- chi[0]=s;
-
- // y equal to Sqrt[3]/2
- chi[1]=sqrt(3)/2.;
-}
-
-void d_chi_0(const double& s, Vector<double>& d_chi)
-{
- // x equal to s
- d_chi[0]=1;
-
- // y equal to Sqrt[3]/2
- d_chi[1]=0;
-}
-
-void d2_chi_0(const double& s, Vector<double>& d_chi)
-{
- // x equal to s
- d_chi[0]=0;
-
- // y equal to Sqrt[3]/2
- d_chi[1]=0;
-}
-
-// Parametric function to describe the single (quadratic) curved side
-void chi_2(const double& s, Vector<double>& chi)
-{
- // x equal to s
- chi[0]=s;
-
- // y equal to simplest quadratic that I could think of
- chi[1]=-s*s+1/4.+sqrt(3)/2.;
-}
-
-// Parametric function to describe the single (quadratic) curved side
-void d_chi_2(const double& s, Vector<double>& d_chi)
-{
- // derivative of y component 
- d_chi[0]=1;
-
- // derivative of x component
- d_chi[1]=-2*s;
-}
-
-/// Parametric function to describe the single (cubic) curved side
-void chi_circle(const double& s, Vector<double>& chi)
-{
- // x equal to s
- chi[0]=std::cos(s);
-
- // y equal to simplest cubic I could think of 
- chi[1]=std::sin(s);
-}
-
-/// Parametric function to describe the single (cubic) curved side
-void d_chi_circle(const double& s, Vector<double>& d_chi)
-{
- // x equal to s
- d_chi[0]=-std::sin(s);
-
- // y equal to simplest cubic I could think of 
- d_chi[1]= std::cos(s);
-}
-
-/// Parametric function to describe the single (cubic) curved side
-void d2_chi_circle(const double& s, Vector<double>& chi)
-{
- // x equal to s
- chi[0]=-std::cos(s);
-
- // y equal to simplest cubic I could think of 
- chi[1]=-std::sin(s);
-}
-
-/// Parametric function to describe the single (cubic) curved side
-void chi_3(const double& s, Vector<double>& chi)
-{
- // x equal to s
- chi[0]=s;
-
- // y equal to simplest cubic I could think of 
- chi[1]=s*(s*s-1/4.)+sqrt(3)/2.;
-}
-
-/// Parametric function to describe the single (cubic) curved side
-void d_chi_3(const double& s, Vector<double>& d_chi)
-{
- // x equal to s
- d_chi[0]=1;
-
- // y equal to simplest cubic I could think of 
- d_chi[1]=3*s*s-1/4.;
-}
-
 /// Exact solution as a Vector
 void get_p0(const Vector<double>& x, Vector<double>& p)
 {
@@ -472,15 +374,8 @@ int main(int argc, char **argv){
  oomph::CommandLineArgs::setup(argc,argv);
 
  // Set up the parametric function
- void (*chi_pt)(const double& s, Vector<double>& v) = &chi_circle; // cle;
-//parametric_edge_quad;//int;
- void (*d_chi_pt)(const double& s, Vector<double>& v) = &d_chi_circle;//&d_chi_circle;
-//d_parametric_edge_quad;//int;
- void (*d2_chi_pt)(const double& s, Vector<double>& v) = &d2_chi_circle;
-//&d2_chi_circle;*/d2_parametric_edge_quad;//int;
- // Set up the parametric function
  CurvilineCircleRight parametric_curve;
-  
+ // Constants for the hierarchy of triangles 
  const double centre = 0.8 , s_start = 0.8;//Pi/8.;
 
  // Open a mathematica module
@@ -488,7 +383,7 @@ int main(int argc, char **argv){
  char filename[100];
  sprintf(filename,"RESLT/tests.m");
  outfile.open(filename);
- // Now output the p5 basis
+ // Now output the p5 basis (hard coded) to mathematica script
  outfile << "(* p5 basis polynomials *)\n";
  outfile << "p5[y_]:= { \
  {-(-1 + y)^3 (1 + 3 y + 6 y^2)},\
@@ -499,18 +394,18 @@ int main(int argc, char **argv){
  {1/2 (-1 + y)^2 y^3} \
 }\n";
 
- // Find the parametric dofs
+ // Find the parametric dofs for the mathematica script
  Vector<Vector<double> > parametric_dofs(6,Vector<double> (2));
- (*chi_pt)(0,parametric_dofs[0]);
- (*chi_pt)(1,parametric_dofs[1]);
- (*d_chi_pt)(0,parametric_dofs[2]);
- (*d_chi_pt)(1,parametric_dofs[3]);
- (*d2_chi_pt)(0,parametric_dofs[4]);
- (*d2_chi_pt)(1,parametric_dofs[5]);
+ parametric_curve.position(Vector<double>(1,0),parametric_dofs[0]);
+ parametric_curve.position(Vector<double>(1,1),parametric_dofs[1]);
+ parametric_curve.dposition(Vector<double>(1,0),parametric_dofs[2]);
+ parametric_curve.dposition(Vector<double>(1,1),parametric_dofs[3]);
+ parametric_curve.d2position(Vector<double>(1,0),parametric_dofs[4]);
+ parametric_curve.d2position(Vector<double>(1,1),parametric_dofs[5]);
 
- // Output a mathematica plotting script
+ // Initialize graphics in mathematica plotting script
  outfile << "<<JavaGraphics`\n";
- // Now find the exact chi and dchi
+ // Now output the exact chi and dchi
  outfile << "(* The Edge Parametric function *)\n";
  outfile << "\nchi1 = {";
  for(unsigned i=0; i<6; ++i)
@@ -521,6 +416,7 @@ int main(int argc, char **argv){
   {outfile << parametric_dofs[i][1] << (i==5?"}":","); } 
  outfile << ".p5[s] \n";
  
+ // Establish an order of  colours in the script so that it's appealing 
  Vector<std::string> color_order(7);
  color_order[0] ="Red";
  color_order[1] ="Orange";
@@ -531,21 +427,26 @@ int main(int argc, char **argv){
  color_order[6] ="Magenta";
  outfile << "Show[{";
  outfile << "Graphics[{";
- // Number of elements
+
+ // Initialise number of elements
  const unsigned nel =7;
- // Now loop
- std::ofstream error_file;
- error_file.open("RESLT/error.dat");
+ // Open a new file
+ std::ofstream trace_file;
+ trace_file.open("RESLT/trace.dat");
+ // Now loop over the elements
  for(unsigned iel=0 ; iel< nel ; ++iel)
   {
    // Definitions 
    double delta_s = s_start/std::pow(3./2.,iel+1);
    double s_ubar(centre - delta_s/2.), s_obar(centre + delta_s/2.);
+
    // Now get the vertices and then plot the elements
    Vector<Vector<double> > vertices(3,Vector<double>(2,0.0));
    parametric_curve.position(Vector<double>(1,s_ubar),vertices[0]);
    parametric_curve.position(Vector<double>(1,s_obar),vertices[1]);
-   // get_isosceles_tip(delta_s, vertices[0],vertices[1],vertices[2]);
+
+   // Get the length of the sides and the final vertice to construct
+   // the equilateral triangle
    double side_length = distance_between_two_points(vertices[0],vertices[1]);
    get_right_handed_equilateral_vertex(vertices[0],vertices[1],vertices[2]);
    // Now output
@@ -556,16 +457,21 @@ int main(int argc, char **argv){
    // Set up the problem
    BernadouElementTestBasis test;
    test.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
-//   if(iel==0)
-//    test.check_d_matrix(&get_p8);
+   //   if(iel==0)
+   //    test.check_d_matrix(&get_p8);
  
     // Do some checks on the constants so we know they are functioning correctly
-//    test.check_constant_consistency();
+    //    test.check_constant_consistency();
     std::cout<<(iel==0?"The answer is:\n[":"")
        //<< delta_s <<","<<
        << side_length <<","<<
-test.check_function_norm(&get_solution_and_radial_derivative) //mapping_on_trace_norm()
-        <<(iel==nel-1? "\n]":";");
+test.check_function_norm(&get_solution_and_radial_derivative) 
+       //mapping_on_trace_norm()
+        <<(iel==nel-1? "]\n":";");
+    // Output to trace file
+    trace_file << side_length <<" "<<
+        test.check_function_norm(&get_solution_and_radial_derivative) 
+        <<(iel==nel-1? "":"\n");
   }
 
  outfile << ",\nParametricPlot[Join[chi1,chi2],{s,"<<
@@ -574,8 +480,7 @@ test.check_function_norm(&get_solution_and_radial_derivative) //mapping_on_trace
  outfile << "}]";
  // Close file
  outfile.close();
- error_file.close();
-
+ trace_file.close();
 }
 
  
