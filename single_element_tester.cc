@@ -321,7 +321,7 @@ int main(int argc, char **argv)
  oomph_info<<"Vertices"<<vertices<<"\n";
 
  // Set up the problem
- BernadouElementTestBasis bernadou_test_basis;
+ BernadouElementTestBasis<3> bernadou_test_basis;
  bernadou_test_basis.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
 
  // Output the element to Mathematica

@@ -455,7 +455,7 @@ int main(int argc, char **argv){
    outfile <<"\n" <<(iel==nel-1?"}]":","); 
 
    // Set up the problem
-   BernadouElementTestBasis test;
+   BernadouElementTestBasis<3> test;
    test.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
    //   if(iel==0)
    //    test.check_d_matrix(&get_p8);

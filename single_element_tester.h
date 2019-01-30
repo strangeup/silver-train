@@ -124,13 +124,17 @@ DenseMatrix<double> invert_two_by_two(const DenseMatrix<double>& jac)
 //#############################################################################//
 // Checker class
 //#############################################################################//
-class BernadouElementTestBasis : protected MyC1CurvedElements::BernadouElementBasis<3>
-
+template<unsigned BOUNDARY_ORDER>
+class BernadouElementTestBasis : 
+ protected MyC1CurvedElements::BernadouElementBasis<BOUNDARY_ORDER>
 {
 public:
+  /// \short Shorthand for a vector of vectors containining the vertices
+  typedef Vector<Vector<double> > VertexList;
+
 /// Constructor
   BernadouElementTestBasis()
-    : MyC1CurvedElements::BernadouElementBasis<3>() 
+    : MyC1CurvedElements::BernadouElementBasis<BOUNDARY_ORDER>() 
    {/*Do nothing everything initialised on upgrade */}
  
 /// \short Upgrade the element.  
@@ -139,7 +143,7 @@ public:
     CurvilineGeomObject& parametric_curve)
      {
        Parametric_curve_pt = &parametric_curve;
-       MyC1CurvedElements::BernadouElementBasis<3>::upgrade_element(verts,su,so,MyC1CurvedElements::two,parametric_curve);
+       MyC1CurvedElements::BernadouElementBasis<BOUNDARY_ORDER>::upgrade_element(verts,su,so,MyC1CurvedElements::two,parametric_curve);
      }
 
   /// Get position as a function of parametric coordinate, removed from final element
@@ -156,17 +160,17 @@ public:
 
   /// Get position as a function of local coordinate, removed from final element
   inline void psi (const double& s1, Vector<double>& psi) const
-   {Parametric_curve_pt->position(Vector<double>(1,get_s_ubar()+(get_s_obar()-get_s_ubar())*s1),psi);}
+   {Parametric_curve_pt->position(Vector<double>(1,this->get_s_ubar()+(this->get_s_obar()-this->get_s_ubar())*s1),psi);}
 
   /// Get position as a function of local coordinate, removed from final class
   /// So we need it in the checking class
   void d_psi(const double& s1, Vector<double>& dpsi) const
    {
-    const double s=(get_s_ubar()+(get_s_obar()-get_s_ubar())*s1);
+    const double s=(this->get_s_ubar()+(this->get_s_obar()-this->get_s_ubar())*s1);
     d_chi(s,dpsi);
     // Now scale chi to give d_psi
     for(unsigned i=0;i<2;++i)
-      {dpsi[i]*=(get_s_obar()-get_s_ubar());}  
+      {dpsi[i]*=(this->get_s_obar()-this->get_s_ubar());}  
     }
 
 private:
@@ -183,13 +187,12 @@ Vector<double> get_global_dofs(const ExactSolnFctPt& w)
  {
   //Initialise
   Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),
-                          ei(3,Vector<double>(2,0.25)),
+                          ei(this->n_internal_dofs(),Vector<double>(2,0.25)),
                           w_at_xi(6,Vector<double> (6,0.0));
-  ai=get_vertices();
-  Vector<double> gdofs(21,0.0);
+  ai=this->get_vertices();
+  Vector<double> gdofs(this->n_basis_functions(),0.0);
 
-
-  // Fill in ei
+  // Fill in ei HERE this will break if templated
   ei[0][0]=0.5;
   ei[1][1]=0.5;
 
@@ -198,9 +201,12 @@ Vector<double> get_global_dofs(const ExactSolnFctPt& w)
    {
     // Fill in Vectors on nodes
     (*w)(ai[i],w_at_xi[i]);
-
+   }
+  // Get the dofs
+  for (unsigned i=0; i<this->n_internal_dofs(); ++i)
+   {
     // Fill in Vectors at internal points
-    Vector<double> x(2); f_k(ei[i],x);
+    Vector<double> x(2); this->f_k(ei[i],x);
     (*w)(x,w_at_xi[3+i]);
    }
 
@@ -218,6 +224,10 @@ Vector<double> get_global_dofs(const ExactSolnFctPt& w)
     gdofs[ 9+3*i]=w_at_xi[i][3];
     gdofs[10+3*i]=w_at_xi[i][5];
     gdofs[11+3*i]=w_at_xi[i][4];
+   }
+  // Get the dofs
+  for (unsigned i=0; i<this->n_internal_dofs(); ++i)
+   {
    // Internal dofs
    gdofs[18+i]=w_at_xi[3+i][0];
    }
@@ -229,12 +239,12 @@ Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
  {
   //Initialise
   Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),
-                          ei(3,Vector<double>(2,0.25)),
+                          ei(this->n_internal_dofs(),Vector<double>(2,0.25)),
                           w_at_xi(6,Vector<double> (6,0.0));
-  ai=get_vertices();
-  Vector<double> gdofs(21,0.0);
+  ai=this->get_vertices();
+  Vector<double> gdofs(this->n_basis_functions(),0.0);
 
-  // Fill in ei
+  // Fill in ei // HERE this will break templating
   ei[0][0]=0.5;
   ei[1][1]=0.5;
 
@@ -243,9 +253,12 @@ Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
    {
     // Fill in Vectors on nodes
     (*w)(ai[i],w_at_xi[i]);
-
+   }
+  // Get the dofs
+  for (unsigned i=0; i<this->n_internal_dofs(); ++i)
+   {
     // Fill in Vectors at internal points
-    Vector<double> x(2); f_k(ei[i],x);
+    Vector<double> x(2); this->f_k(ei[i],x);
     (*w)(x,w_at_xi[3+i]);
    }
 
@@ -260,7 +273,10 @@ Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
    gdofs[6*i+5]=w_at_xi[i][4];
    gdofs[6*i+4]=w_at_xi[i][5];
    // The get dofs are the wrong way around
-
+   }
+  // Now rearrange them
+  for (unsigned i=0; i< this->n_internal_dofs(); ++i)
+   {
    // Internal dofs
    gdofs[18+i]=w_at_xi[3+i][0];
    }
@@ -268,11 +284,12 @@ Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
  }
 // These next two won't be pretty.
 
+// THIS should have two template versions (significant differences I think)
 // Return the global dofs of a function on an element
 void check_basic_shape(const double& tol)
  {
   //Initialise
-  Vector<double> bdofs(36,0.0);
+  Vector<double> bdofs(this->n_basic_basis_functions(),0.0);
   Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),
     ei(3,Vector<double>(2,0.25)), ni(3,Vector<double>(2,0.0)),
     bi(3,Vector<double>(2,0.5)),di(6,Vector<double>(2,0.0));
@@ -301,24 +318,24 @@ void check_basic_shape(const double& tol)
   di[5][0]=0.25;  di[5][1]=0.75;
 
   // Get the shape functions
-  Shape p7 (36), m7 (36);
-  DShape dp7 (36,2), dm7 (36,2), d2p7 (36,3), d2m7 (36,3);
-  DenseMatrix<double> a_matrix (36,36,0.0);
-  monomial_to_basic_matrix(a_matrix);
+  Shape p7 (this->n_basic_basis_functions()), m7 (this->n_basic_basis_functions());
+  DShape dp7 (this->n_basic_basis_functions(),2), dm7 (this->n_basic_basis_functions(),2), d2p7 (this->n_basic_basis_functions(),3), d2m7 (this->n_basic_basis_functions(),3);
+  DenseMatrix<double> a_matrix (this->n_basic_basis_functions(),this->n_basic_basis_functions(),0.0);
+  this->monomial_to_basic_matrix(a_matrix);
 
   // Shape function dofs
-  DenseMatrix<double> shape_dofs(36,36,0.0);
+  DenseMatrix<double> shape_dofs(this->n_basic_basis_functions(),this->n_basic_basis_functions(),0.0);
 
   // Do the ai
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    full_basis_monomials(ai[i],p7);
+    this->full_basis_monomials(ai[i],p7);
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         m7(j)+=a_matrix(j,k)*p7(k);
@@ -332,15 +349,15 @@ void check_basic_shape(const double& tol)
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    dfull_basis_monomials(ai[i],dp7);
- //   for(unsigned k=0;k<36;++k)
+    this->dfull_basis_monomials(ai[i],dp7);
+ //   for(unsigned k=0;k<this->n_basic_basis_functions();++k)
  //       oomph_info<<dp7(k,0)<<" "<<dp7(k,1)<<"\n";
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         dm7(j,0)+=a_matrix(j,k)*dp7(k,0);
@@ -349,9 +366,9 @@ void check_basic_shape(const double& tol)
      }
 
     // Fill in matrix entries
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
       shape_dofs(3+2*i,j)=dm7(j,0);
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
       shape_dofs(4+2*i,j)=dm7(j,1);
    }
 
@@ -359,16 +376,16 @@ void check_basic_shape(const double& tol)
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    d2full_basis_monomials(ai[i],d2p7);
-  //  for(unsigned k=0;k<36;++k)
+    this->d2full_basis_monomials(ai[i],d2p7);
+  //  for(unsigned k=0;k<this->n_basic_basis_functions();++k)
   //      oomph_info<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       d2m7(j,0)=0.0;
       d2m7(j,1)=0.0;
       d2m7(j,2)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         d2m7(j,0)+=a_matrix(j,k)*d2p7(k,0);
@@ -386,13 +403,13 @@ void check_basic_shape(const double& tol)
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    dfull_basis_monomials(bi[i],dp7);
+    this->dfull_basis_monomials(bi[i],dp7);
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         dm7(j,0)+=a_matrix(j,k)*dp7(k,0);
@@ -407,18 +424,18 @@ void check_basic_shape(const double& tol)
   for(unsigned i=0; i<6;++i)
    {
     // Construct shape functions
-    full_basis_monomials(di[i],p7);
+    this->full_basis_monomials(di[i],p7);
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         m7(j)+=a_matrix(j,k)*p7(k);
        }
       // Fill in matrix entries
-      shape_dofs(21+i,j)=m7(j);
+      shape_dofs(this->n_basis_functions()+i,j)=m7(j);
      }
    }
 
@@ -426,13 +443,13 @@ void check_basic_shape(const double& tol)
   for(unsigned i=0; i<6;++i)
    {
     // Construct shape functions
-    dfull_basis_monomials(di[i],dp7);
+    this->dfull_basis_monomials(di[i],dp7);
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         dm7(j,0)+=a_matrix(j,k)*dp7(k,0);
@@ -447,12 +464,12 @@ void check_basic_shape(const double& tol)
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    full_basis_monomials(ei[i],p7);
+    this->full_basis_monomials(ei[i],p7);
 
-    for (unsigned j=0; j<36; ++j)
+    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         m7(j)+=a_matrix(j,k)*p7(k);
@@ -464,13 +481,13 @@ void check_basic_shape(const double& tol)
 
   //Output any non zeros
   oomph_info<<"\n";
-  for(unsigned i=0;i<21;++i)
-    for(unsigned j=0;j<21;++j)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
+    for(unsigned j=0;j<this->n_basis_functions();++j)
       oomph_info<<(fabs(shape_dofs(i,j))>1e-11? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
 
   //Output any non zeros
-  for(unsigned i=0;i<36;++i)
-    for(unsigned j=0;j<36;++j)
+  for(unsigned i=0;i<this->n_basic_basis_functions();++i)
+    for(unsigned j=0;j<this->n_basic_basis_functions();++j)
       if(std::abs(shape_dofs(i,j)-((i==j)?1.0:0.0))>tol)
         oomph_info/*<<std::scientific*/
                  <<"Nonzero difference at ("<<i<<","<<j<<"): "
@@ -538,10 +555,10 @@ void check_1d_hermite_shape(const double& tol)
     DShape dpsi5(6,1),dpsi3(4,1);
 
     //Fill in
-    hermite_shape_1d_5(vertices[i],psi5);
-    hermite_shape_1d_3(vertices[i],psi3);
+    this->hermite_shape_1d_5(vertices[i],psi5);
+    this->hermite_shape_1d_3(vertices[i],psi3);
 
-    d_hermite_shape_1d_5(vertices[i],dpsi5);
+    this->d_hermite_shape_1d_5(vertices[i],dpsi5);
 
    for(unsigned j=0;j<6;++j)
       {
@@ -562,9 +579,9 @@ void check_1d_hermite_shape(const double& tol)
          DShape dchi(6,1);
 
          // Fill in fd values
-         hermite_shape_1d_5(s+p*h,chi);
+         this->hermite_shape_1d_5(s+p*h,chi);
          fd_points_5[l]=chi[j];
-         d_hermite_shape_1d_5(s+p*h,dchi);
+         this->d_hermite_shape_1d_5(s+p*h,dchi);
          d_fd_points_5[l]=dchi(j,0);
         }
 
@@ -588,7 +605,7 @@ void check_1d_hermite_shape(const double& tol)
          int p=l-3;
          Shape chi(4);
          // Fill in fd values
-         hermite_shape_1d_3(s+p*h,chi);
+         this->hermite_shape_1d_3(s+p*h,chi);
          fd_points_3[l]=chi[j];
         }
 
@@ -654,8 +671,8 @@ void check_1d_hermite_shape(const double& tol)
     //Initialise
     double p5_apx=0.0,p3_apx=0.0;
     Shape psi_5(6),psi_3(4);
-    hermite_shape_1d_5(s,psi_5);
-    hermite_shape_1d_3(s,psi_3);
+    this->hermite_shape_1d_5(s,psi_5);
+    this->hermite_shape_1d_3(s,psi_3);
 
     // Get exact
     Vector<double> p5_ex(3);
@@ -686,22 +703,22 @@ void check_1d_hermite_shape(const double& tol)
 void check_b2l_submatrix_3(const double& tol)
 {
 // Get the B3 matrix
-DenseMatrix<double> B3 (21,9,0.0);
-basic_to_local_submatrix_3(B3);
+DenseMatrix<double> B3 (this->n_basis_functions(),9,0.0);
+this->basic_to_local_submatrix_3(B3);
 
 // Output
 //oomph_info<<"B3:\n";
-//for(unsigned i=0;i<21;++i)
+//for(unsigned i=0;i<this->n_basis_functions();++i)
 // for(unsigned j=0;j<9;++j)
 //   oomph_info<<B3(i,j)<<(j==8?"\n":" ");
 
 // Get the d matrix
-DenseMatrix<double> d (21,21,0.0);
-local_to_global_matrix(d);
+DenseMatrix<double> d (this->n_basis_functions(),this->n_basis_functions(),0.0);
+this->local_to_global_matrix(d);
 
 // Get the vertices
 Vector<Vector<double> > vertices(3,Vector<double>(2,0.0));
-vertices=get_vertices();
+vertices=this->get_vertices();
 
 
 Vector<Vector<double> > local_vertices(3,Vector<double>(2,0.0));
@@ -712,7 +729,7 @@ for(unsigned n=0;n<3;++n)
  {
   // Get Jacobian
   DenseMatrix<double> jacobian(2,2,0.0);
-  get_basic_jacobian(local_vertices[n],jacobian);
+  this->get_basic_jacobian(local_vertices[n],jacobian);
   // We need these for comparison
   DenseMatrix<double> Datnode(5,5,0.0);
   DenseMatrix<double> Batnode(5,3,0.0);
@@ -724,7 +741,7 @@ for(unsigned n=0;n<3;++n)
 
   // Get Hessian
   RankThreeTensor<double> hessian(2,2,2);
-  get_basic_hessian(local_vertices[n],hessian);
+  this->get_basic_hessian(local_vertices[n],hessian);
 
 //  oomph_info<<"Hessian:\n";
 //  oomph_info<<hessian(0,0,0)<<" "<<hessian(0,0,1)<<" "<<hessian(0,1,1)<<"\n"
@@ -817,25 +834,25 @@ void check_traces(const ExactSolnFctPt&
 get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
 {
  // Get the dofs
- Vector<double> dofs (21,0.0);
+ Vector<double> dofs (this->n_basis_functions(),0.0);
  dofs=get_global_dofs(get_analyticfunction);
 
  // Now get D matrix
- DenseMatrix<double> d (21,21,0.0);
- local_to_global_matrix(d);
+ DenseMatrix<double> d (this->n_basis_functions(),this->n_basis_functions(),0.0);
+ this->local_to_global_matrix(d);
 
  // Get the local dofs
- Vector<double> local_dofs(21,0.0);
- for(unsigned i=0; i<21;++i)
+ Vector<double> local_dofs(this->n_basis_functions(),0.0);
+ for(unsigned i=0; i<this->n_basis_functions();++i)
   {
-   for(unsigned j=0; j<21;++j)
+   for(unsigned j=0; j<this->n_basis_functions();++j)
     {
      local_dofs[j]+=dofs[i]*d(i,j);
     }
   }
 
  // Now get the traces at several values of s
- unsigned n_points=21;
+ unsigned n_points=this->n_basis_functions();
  Vector<double> values_f1(n_points,0.0), values_f2(n_points,0.0),
                 values_f3(n_points,0.0), exact_values_f3(n_points,0.0),
                 exact_values_f1(n_points,0.0), exact_values_f2(n_points,0.0);
@@ -855,12 +872,12 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
    s[1]=0.0;
 
    // Sum up at this point
-   Vector<double> f1(21,0.0),g1(21,0.0);
-   f1=f_1(t);
-   g1=g_1(t);
+   Vector<double> f1(this->n_basis_functions(),0.0),g1(this->n_basis_functions(),0.0);
+   f1=this->f_1(t);
+   g1=this->g_1(t);
 
    // Loop
-   for (unsigned j=0; j<21; ++j)
+   for (unsigned j=0; j<this->n_basis_functions(); ++j)
     {
      values_f1[i]+=local_dofs[j]*f1[j];
      values_g1[i]+=local_dofs[j]*g1[j];
@@ -868,7 +885,7 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
 
    // Get the exact result
    Vector<double> pex(6,0.0),x(2);
-   f_k(s,x);  
+   this->f_k(s,x);  
    (*get_analyticfunction)(x,pex);
    exact_values_f1[i]=pex[0];
 
@@ -881,10 +898,10 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
    if(!ignore_g)
     {
      Vector<double> pex(6,0.0),x(2);
-     f_k(s,x);  
+     this->f_k(s,x);  
      (*get_analyticfunction)(x,pex);
      for(unsigned j=0; j<2;++j)
-      exact_values_g1[i]+=pex[1+j]*altitude_vector_2(j);
+      exact_values_g1[i]+=pex[1+j]*this->altitude_vector_2(j);
      // Check the difference
      if(std::abs(values_g1[i] - exact_values_g1[i])> tol)
        oomph_info<<"Nonzero difference for trace on side 2 (g_1):\n"
@@ -897,11 +914,11 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
    s[1]=t;
 
   // Sum up at this point
-   Vector<double> f2(21,0.0), g2(21,0.0);
-   f2=f_2(t);
-   g2=g_2(t);
+   Vector<double> f2(this->n_basis_functions(),0.0), g2(this->n_basis_functions(),0.0);
+   f2=this->f_2(t);
+   g2=this->g_2(t);
    // Loop
-   for (unsigned j=0; j<21; ++j)
+   for (unsigned j=0; j<this->n_basis_functions(); ++j)
     {
      values_f2[i]+=local_dofs[j]*f2[j];
      values_g2[i]+=local_dofs[j]*g2[j];
@@ -909,7 +926,7 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
 
    // Get the exact result
    pex=Vector<double>(6,0.0);
-   f_k(s,x);  
+   this->f_k(s,x);  
    (*get_analyticfunction)(x,pex);
    exact_values_f2[i]=pex[0];
 
@@ -921,10 +938,10 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
    if(!ignore_g)
     {
      Vector<double> pex(6,0.0);
-     f_k(s,x);  
+     this->f_k(s,x);  
      (*get_analyticfunction)(x,pex);
      for(unsigned j=0; j<2;++j)
-      exact_values_g2[i]+=pex[1+j]*altitude_vector_1(j);
+      exact_values_g2[i]+=pex[1+j]*this->altitude_vector_1(j);
      // Check the difference
      if(fabs(values_g2[i] - exact_values_g2[i])> tol)
        oomph_info<<"Nonzero difference for trace on side 1 (g_2):\n"
@@ -938,16 +955,16 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
    s[0]=t;
    s[1]=1-t;
 
-   Vector<double> f3(21,0.0);
-   f3=f_3(t);
+   Vector<double> f3(this->n_basis_functions(),0.0);
+   f3=this->f_3(t);
    // Loop
-   for (unsigned j=0; j<21; ++j)
-    for (unsigned k=0; k<21; ++k)
+   for (unsigned j=0; j<this->n_basis_functions(); ++j)
+    for (unsigned k=0; k<this->n_basis_functions(); ++k)
     values_f3[i]+=dofs[j]*d(j,k)*f3[k];
 
    // Get the exact result
    pex=Vector<double>(6,0.0);
-   f_k(s,x);
+   this->f_k(s,x);
    (*get_analyticfunction)(x,pex);
    exact_values_f3[i]=pex[0];
 
@@ -964,15 +981,72 @@ get_analyticfunction, const double& tol, bool ignore_side_3, bool ignore_g )
 }
 
 // Check the Traces against what we would expect
+void check_f3_trace(const double& tol)
+{
+ // Now we check G3 using the other submatrices
+ // Get the B3 matrix
+ DenseMatrix<double> B2 (this->n_basis_functions(),6,0.0);
+ this->basic_to_local_submatrix_2(B2);
+
+ DenseMatrix<double> B3 (this->n_basis_functions(),9,0.0);
+ this->basic_to_local_submatrix_3(B3);
+
+ const unsigned n_points=15;
+ // Loop over some points
+ for(unsigned i=0; i<n_points;++i)
+  {
+   // Initialise position vector
+   double t=1.0*i*1./(n_points-1);
+   // Now initialise the B3 matrix
+   Vector<double> f3(this->n_basis_functions(),0.0);
+   f3=this->f_3(t);
+
+   // Get 1d shape
+   Shape psi(6);
+   this->hermite_shape_1d_5(t,psi);
+
+   // Now initialise f3
+   Vector<double> f3_exact(this->n_basis_functions(),0.0);
+   for(unsigned j=0;j<this->n_basis_functions();++j)
+    {
+     // Function at node 0
+     if(j==0)
+      {f3_exact[j]+= psi[1];}
+     // Function at node 1
+     if(j==1)
+      {f3_exact[j]+= psi[0];}
+
+     // D2 w (a0)(n,t) derivative at node 0
+     f3_exact[j]-=(-B2(j,0)+ B2(j,1))*psi[3];
+     // D2 w (a1)(n,t) derivative at node 1
+     f3_exact[j]+=( B2(j,2)- B2(j,3))*psi[2];
+
+     // D2 w (a0)(n,t) derivative at node 0
+     f3_exact[j]+=(B3(j,0)-2*B3(j,1)+B3(j,2))*psi[5];
+     // D2 w (a1)(n,t) derivative at node 1
+     f3_exact[j]+=(B3(j,3)-2*B3(j,4)+B3(j,5))*psi[4];
+    }
+
+  // Now compare exact with aprox.
+  for(unsigned j=0;j<this->n_basis_functions();++j)
+   {
+    if(std::abs(f3_exact[j]-f3[j])>0)
+      oomph_info<<"Non zero difference for f3_exact at dof: "<<j
+               << " diff: "<<f3_exact[j]-f3[j]<<"\n";
+   }
+  }
+}
+
+// Check the Traces against what we would expect
 void check_g3_trace(const double& tol)
 {
  // Now we check G3 using the other submatrices
  // Get the B3 matrix
- DenseMatrix<double> B2 (21,6,0.0);
- basic_to_local_submatrix_2(B2);
+ DenseMatrix<double> B2 (this->n_basis_functions(),6,0.0);
+ this->basic_to_local_submatrix_2(B2);
 
- DenseMatrix<double> B3 (21,9,0.0);
- basic_to_local_submatrix_3(B3);
+ DenseMatrix<double> B3 (this->n_basis_functions(),9,0.0);
+ this->basic_to_local_submatrix_3(B3);
 
  const unsigned n_points=11;
  // Loop over some points
@@ -981,21 +1055,21 @@ void check_g3_trace(const double& tol)
    // Initialise position vector
    double t=1.0*i*1./(n_points-1);
    // Now initialise the B3 matrix
-   Vector<double> g3(21,0.0);
-   g3=g_3(t);
+   Vector<double> g3(this->n_basis_functions(),0.0);
+   g3=this->g_3(t);
 
    // Get 1d shape
    Shape psi(4);
-   hermite_shape_1d_3(t,psi);
+   this->hermite_shape_1d_3(t,psi);
 
    // Now initialise g3
-   Vector<double> g3_exact(21,0.0);
-   for(unsigned j=0;j<21;++j)
+   Vector<double> g3_exact(this->n_basis_functions(),0.0);
+   for(unsigned j=0;j<this->n_basis_functions();++j)
     {
      // Normal derivative at node 0
-     g3_exact[j]+=(-0.5*B2(j,0)-0.5*B2(j,1))*psi[1];
+     g3_exact[j]+=(-0.5*(B2(j,0))-0.5*(B2(j,1)))*psi[1];
      // Normal derivative at node 1
-     g3_exact[j]+=(-0.5*B2(j,2)-0.5*B2(j,3))*psi[0];
+     g3_exact[j]+=(-0.5*(B2(j,2))-0.5*(B2(j,3)))*psi[0];
 
      // D2 w (a0)(n,t) derivative at node 0
      g3_exact[j]+=(-0.5*B3(j,0)+0.5*B3(j,2))*psi[3];
@@ -1004,7 +1078,7 @@ void check_g3_trace(const double& tol)
     }
 
   // Now compare exact with aprox.
-  for(unsigned j=0;j<21;++j)
+  for(unsigned j=0;j<this->n_basis_functions();++j)
    {
     if(std::abs(g3_exact[j]-g3[j])>0)
       oomph_info<<"Non zero difference for g3_exact at dof: "<<i
@@ -1019,8 +1093,9 @@ void check_shape(const double& tol)
   //Initialise
   Vector<Vector<double> > ei(3,Vector<double>(2,0.25)),
                           ai(3,Vector<double>(2,0.0));
-  Vector<double> bdofs(36,0.0);
+  Vector<double> bdofs(this->n_basic_basis_functions(),0.0);
 
+  // HERE FILL IN LOCAL DOFS TEMPLATED
   // fill in ai (local)
   ai[0][0]=1.0; ai[1][1]=1.0;
 
@@ -1028,49 +1103,49 @@ void check_shape(const double& tol)
   ei[0][0]=0.5 ; ei[1][1]=0.5;
 
   // Get the shape functions
-  Shape p7 (36), m7 (36);
-  DShape dp7 (36,2), dm7 (36,2);
-  DShape d2p7 (36,3), d2m7 (36,3);
+  Shape p7 (this->n_basic_basis_functions()), m7 (this->n_basic_basis_functions());
+  DShape dp7 (this->n_basic_basis_functions(),2), dm7 (this->n_basic_basis_functions(),2);
+  DShape d2p7 (this->n_basic_basis_functions(),3), d2m7 (this->n_basic_basis_functions(),3);
 
   // Get the matrices
-  DenseMatrix<double> a_matrix (36,36,0.0), b_matrix (21,36,0.0),
-   d_matrix (21,21,0.0),  conversion_matrix (21,36,0.0),
-   gl2basic_matrix (21,36,0.0);
+  DenseMatrix<double> a_matrix (this->n_basic_basis_functions(),this->n_basic_basis_functions(),0.0), b_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0),
+   d_matrix (this->n_basis_functions(),this->n_basis_functions(),0.0),  conversion_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0),
+   gl2basic_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
 
-  monomial_to_basic_matrix(a_matrix);
-  basic_to_local_matrix(b_matrix);
-  local_to_global_matrix(d_matrix);
+  this->monomial_to_basic_matrix(a_matrix);
+  this->basic_to_local_matrix(b_matrix);
+  this->local_to_global_matrix(d_matrix);
 
   // Fill in conversion matrix
-  for(unsigned i=0;i<21;++i)
-   for(unsigned j=0;j<36;++j)
-     for(unsigned k=0;k<21;++k)
-      for(unsigned l=0;l<36;++l)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
+   for(unsigned j=0;j<this->n_basic_basis_functions();++j)
+     for(unsigned k=0;k<this->n_basis_functions();++k)
+      for(unsigned l=0;l<this->n_basic_basis_functions();++l)
         conversion_matrix(i,j)+=d_matrix(i,k)*b_matrix(k,l)*a_matrix(l,j);
 
 //  // Fill in conversion matrix
-//  for(unsigned i=0;i<21;++i)
-//    for(unsigned k=0;k<21;++k)
-//     for(unsigned l=0;l<36;++l)
+//  for(unsigned i=0;i<this->n_basis_functions();++i)
+//    for(unsigned k=0;k<this->n_basis_functions();++k)
+//     for(unsigned l=0;l<this->n_basic_basis_functions();++l)
 //       gl2basic_matrix(i,l)+=d_matrix(i,k)*b_matrix(k,l);
 //
-//   for(unsigned i=0;i<21;++i)
-//     for(unsigned l=0;l<36;++l)
+//   for(unsigned i=0;i<this->n_basis_functions();++i)
+//     for(unsigned l=0;l<this->n_basic_basis_functions();++l)
 //     oomph_info<<gl2basic_matrix(i,l)<<(l==35 ? "\n":" ");
 
   // Shape function dofs
-  DenseMatrix<double> shape_dofs(21,21,0.0);
+  DenseMatrix<double> shape_dofs(this->n_basis_functions(),this->n_basis_functions(),0.0);
 
   // Do the ai
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    full_basis_monomials(ai[i],p7);
+    this->full_basis_monomials(ai[i],p7);
 
-    for (unsigned j=0; j<21; ++j)
+    for (unsigned j=0; j<this->n_basis_functions(); ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         m7(j)+=conversion_matrix(j,k)*p7(k);
@@ -1084,15 +1159,15 @@ void check_shape(const double& tol)
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    dfull_basis_monomials(ai[i],dp7);
+    this->dfull_basis_monomials(ai[i],dp7);
 
-    for (unsigned j=0; j<21; ++j)
+    for (unsigned j=0; j<this->n_basis_functions(); ++j)
      {
       // Initialise
       Vector<double> dm7j_ds(2,0.0);
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         dm7j_ds[0]+=conversion_matrix(j,k)*dp7(k,0);
@@ -1101,7 +1176,7 @@ void check_shape(const double& tol)
 
       // Now transform
       DenseMatrix<double> jacobian(2,2,0.0), inv_jacobian(2,2,0.0);
-      get_basic_jacobian(ai[i],jacobian);
+      this->get_basic_jacobian(ai[i],jacobian);
       // Now invert
       inv_jacobian=invert_two_by_two(jacobian);
 
@@ -1115,9 +1190,9 @@ void check_shape(const double& tol)
        }
     }
     // Fill in matrix entries
-    for (unsigned j=0; j<21; ++j)
+    for (unsigned j=0; j<this->n_basis_functions(); ++j)
       shape_dofs(3+2*i,j)=dm7(j,0);
-    for (unsigned j=0; j<21; ++j)
+    for (unsigned j=0; j<this->n_basis_functions(); ++j)
       shape_dofs(4+2*i,j)=dm7(j,1);
    }
 
@@ -1125,12 +1200,12 @@ void check_shape(const double& tol)
   for(unsigned i=0; i<3;++i)
    {
     // Construct shape functions
-    d2full_basis_monomials(ai[i],d2p7);
-    dfull_basis_monomials(ai[i],dp7);
+    this->d2full_basis_monomials(ai[i],d2p7);
+    this->dfull_basis_monomials(ai[i],dp7);
  //   oomph_info<<ai[i]<<"\n";
-   // for(unsigned k=0;k<36;++k)
+   // for(unsigned k=0;k<this->n_basic_basis_functions();++k)
    //     oomph_info<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
-    for (unsigned j=0; j<21; ++j)
+    for (unsigned j=0; j<this->n_basis_functions(); ++j)
      {
       //Initialise
       DenseMatrix<double> d2m7j_ds2(2,2,0.0);
@@ -1138,7 +1213,7 @@ void check_shape(const double& tol)
       d2m7(j,0)=0.0;
       d2m7(j,1)=0.0;
       d2m7(j,2)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         dm7j_ds[0]+=conversion_matrix(j,k)*dp7(k,0);
@@ -1152,8 +1227,8 @@ void check_shape(const double& tol)
       // Now transform
       DenseMatrix<double> jacobian(2,2,0.0), inv_jacobian(2,2,0.0);
       RankThreeTensor<double> hessian(2,2,2,0.0), d_inv_jac_ds(2,2,2,0.0);
-      get_basic_jacobian(ai[i],jacobian);
-      get_basic_hessian(ai[i],hessian);
+      this->get_basic_jacobian(ai[i],jacobian);
+      this->get_basic_hessian(ai[i],hessian);
 //      for(unsigned alpha=0;alpha<2;++alpha)
 //       for(unsigned beta =0;beta<2 ;++beta )
 //         oomph_info<<"("<<hessian(alpha,beta,0)<<","<<hessian(alpha,beta,1)<<")"
@@ -1194,20 +1269,20 @@ void check_shape(const double& tol)
    }
 
 //  oomph_info<<"The m7: \n[";
-//  for(unsigned i=0;i<36;++i)
-//      oomph_info<<p7[i]<<(i==36?"]":",");
+//  for(unsigned i=0;i<this->n_basic_basis_functions();++i)
+//      oomph_info<<p7[i]<<(i==this->n_basic_basis_functions()?"]":",");
 //  oomph_info<<"\n";
 
   // Do the eis
-  for(unsigned i=0; i<3;++i)
+  for(unsigned i=0; i<this->n_internal_dofs();++i)
    {
     // Construct shape functions
-    full_basis_monomials(ei[i],p7);
+    this->full_basis_monomials(ei[i],p7);
 
-    for (unsigned j=0; j<21; ++j)
+    for (unsigned j=0; j<this->n_basis_functions(); ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Fill in basis at ai
         m7(j)+=conversion_matrix(j,k)*p7(k);
@@ -1218,12 +1293,12 @@ void check_shape(const double& tol)
    }
 
   //Output any non zeros
-  for(unsigned i=0;i<21;++i)
-    for(unsigned j=0;j<21;++j)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
+    for(unsigned j=0;j<this->n_basis_functions();++j)
       oomph_info<<(shape_dofs(i,j)>tol? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
 
-  for(unsigned i=0;i<21;++i)
-    for(unsigned j=0;j<21;++j)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
+    for(unsigned j=0;j<this->n_basis_functions();++j)
       if(std::abs(shape_dofs(i,j)-((i==j)?1.0:0.0))>tol)
         oomph_info/*<<std::scientific*/
                  <<"Nonzero difference at ("<<i<<","<<j<<"): "
@@ -1240,24 +1315,25 @@ void check_get_shape(const double& tol)
   DShape d2psi(3,6,3);
 
   // Initialise bubble shape
-  Shape bpsi(3,1);
-  DShape dbpsi(3,1,2);
-  DShape d2bpsi(3,1,3);
+  Shape bpsi(this->n_internal_dofs(),1);
+  DShape dbpsi(this->n_internal_dofs(),1,2);
+  DShape d2bpsi(this->n_internal_dofs(),1,3);
 
   // Initialise local vertices
   Vector<Vector<double> > lvertices(3,Vector<double>(2,0.0));
   lvertices[0][0]=1.0;
   lvertices[1][1]=1.0;
 
-  Vector<Vector<double> > linternpts(3,Vector<double>(2,0.25));
+  // HERE TEMPLATE INITIAlISE LOCAL POINTS 
+  Vector<Vector<double> > linternpts(this->n_internal_dofs(),Vector<double>(2,0.25));
   linternpts[0][0]=0.5;
   linternpts[1][1]=0.5;
 
-  DenseMatrix<double> shape_matrix(21,21,0.0);
+  DenseMatrix<double> shape_matrix(this->n_basis_functions(),this->n_basis_functions(),0.0);
 
   // Now check the shape
   // Loop over the shape functions
-  for(unsigned i=0;i<21;++i)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
    {
     // The nodal basis functions
     if(i<18)
@@ -1271,9 +1347,9 @@ void check_get_shape(const double& tol)
        {
         // At the nodes the Hermite dofs
         unsigned nn=ii;
-        d2_shape_dx2(lvertices[nn],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
-        d_shape_dx(lvertices[nn],psi,bpsi,dpsi,dbpsi);
-        shape(lvertices[nn],psi,bpsi);
+        this->d2_shape_dx2(lvertices[nn],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
+        this->d_shape_dx(lvertices[nn],psi,bpsi,dpsi,dbpsi);
+        this->shape(lvertices[nn],psi,bpsi);
 
         shape_matrix(i,6*nn)  =  psi(n,l);
         shape_matrix(i,6*nn+1)= dpsi(n,l,0);
@@ -1281,12 +1357,14 @@ void check_get_shape(const double& tol)
         shape_matrix(i,6*nn+3)= d2psi(n,l,0);
         shape_matrix(i,6*nn+4)= d2psi(n,l,1);
         shape_matrix(i,6*nn+5)= d2psi(n,l,2);
-
-        // At the interior points the bubble dofs
+        }
+      // At the interior points the bubble dofs
+      for(unsigned ii=0;ii<this->n_internal_dofs();++ii)
+       {
         unsigned kk = ii;
-        d2_shape_dx2(linternpts[kk],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
-        d_shape_dx(linternpts[kk],psi,bpsi,dpsi,dbpsi);
-        shape(linternpts[kk],psi,bpsi);
+        this->d2_shape_dx2(linternpts[kk],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
+        this->d_shape_dx(linternpts[kk],psi,bpsi,dpsi,dbpsi);
+        this->shape(linternpts[kk],psi,bpsi);
         shape_matrix(i,18+kk)  =  psi(n,l);
        }
      }
@@ -1300,21 +1378,23 @@ void check_get_shape(const double& tol)
        {
         // At the nodes the Hermite dofs
         unsigned nn=ii;
-        d2_shape_dx2(lvertices[nn],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
-        d_shape_dx(lvertices[nn],psi,bpsi,dpsi,dbpsi);
-        shape(lvertices[nn],psi,bpsi);
+        this->d2_shape_dx2(lvertices[nn],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
+        this->d_shape_dx(lvertices[nn],psi,bpsi,dpsi,dbpsi);
+        this->shape(lvertices[nn],psi,bpsi);
         shape_matrix(i,6*nn)  = bpsi(k,0);
         shape_matrix(i,6*nn+1)= dbpsi(k,0,0);
         shape_matrix(i,6*nn+2)= dbpsi(k,0,1);
         shape_matrix(i,6*nn+3)= d2bpsi(k,0,0);
         shape_matrix(i,6*nn+4)= d2bpsi(k,0,1);
         shape_matrix(i,6*nn+5)= d2bpsi(k,0,2);
-
+        }
+      for(unsigned ii=0;ii<this->n_internal_dofs();++ii)
+       {
         // At the interior points the bubble dofs
         unsigned kk = ii;
-        d2_shape_dx2(linternpts[kk],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
-        d_shape_dx(linternpts[kk],psi,bpsi,dpsi,dbpsi);
-        shape(linternpts[kk],psi,bpsi);
+        this->d2_shape_dx2(linternpts[kk],psi,bpsi,dpsi,dbpsi,d2psi,d2bpsi);
+        this->d_shape_dx(linternpts[kk],psi,bpsi,dpsi,dbpsi);
+        this->shape(linternpts[kk],psi,bpsi);
         shape_matrix(i,18+kk)  =  bpsi(k,0);
        }
      }
@@ -1322,9 +1402,9 @@ void check_get_shape(const double& tol)
 //  for(unsigned i=0;i<3;++i)
 //   {
 //    // Fill in the Bell dofs
-//    d2_shape_dx2(lvertices[i],psi,bpsi,dpsi,dbpsi,d2psi,d2psi);
-//    d_shape_dx(lvertices[i],psi,bpsi,dpsi,dbpsi);
-//   // shape(lvertices[i],psi,bpsi);
+//    this->d2_shape_dx2(lvertices[i],psi,bpsi,dpsi,dbpsi,d2psi,d2psi);
+//    this->d_shape_dx(lvertices[i],psi,bpsi,dpsi,dbpsi);
+//   // this->shape(lvertices[i],psi,bpsi);
 //    for( unsigned k=0;k<18; ++k)
 //     {
 //      unsigned kk = k / 6;
@@ -1347,9 +1427,9 @@ void check_get_shape(const double& tol)
 //     }
 //
 //    // Fill in the other dofs
-//    d2_shape_dx2(linternpts[i],psi,bpsi,dpsi,dbpsi,d2psi,d2psi);
-//    d_shape_dx(linternpts[i],psi,bpsi,dpsi,dbpsi);
-//    shape(linternpts[i],psi,bpsi);
+//    this->d2_shape_dx2(linternpts[i],psi,bpsi,dpsi,dbpsi,d2psi,d2psi);
+//    this->d_shape_dx(linternpts[i],psi,bpsi,dpsi,dbpsi);
+//    this->shape(linternpts[i],psi,bpsi);
 //    for( unsigned k=0;k<18; ++k)
 //     {
 //      unsigned kk = k / 6;
@@ -1363,12 +1443,12 @@ void check_get_shape(const double& tol)
 //   }
 
   //Output
-  for(unsigned i=0;i<21;++i)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
    {
-    for( unsigned k=0;k<21; ++k)
+    for( unsigned k=0;k<this->n_basis_functions(); ++k)
      {
        oomph_info<<(fabs(shape_matrix(i,k))>tol ? shape_matrix(i,k):0.0)
-                <<(k==20?"\n":" ");
+                <<(k==this->n_basis_functions()-1?"\n":" ");
      }
    }
  }
@@ -1378,24 +1458,24 @@ void check_function(const ExactSolnFctPt&
 get_analyticfunction, const double& tol)
  {
   // Get the matrices
-  DenseMatrix<double> a_matrix (36,36,0.0);
-  DenseMatrix<double> b_matrix (21,36,0.0);
-  DenseMatrix<double> d_matrix (21,21,0.0);
-  DenseMatrix<double> conversion_matrix (21,36,0.0);
-  DenseMatrix<double> gl2basic_matrix (21,36,0.0);
-  monomial_to_basic_matrix(a_matrix);
-  basic_to_local_matrix(b_matrix);
-  local_to_global_matrix(d_matrix);
+  DenseMatrix<double> a_matrix (this->n_basic_basis_functions(),this->n_basic_basis_functions(),0.0);
+  DenseMatrix<double> b_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
+  DenseMatrix<double> d_matrix (this->n_basis_functions(),this->n_basis_functions(),0.0);
+  DenseMatrix<double> conversion_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
+  DenseMatrix<double> gl2basic_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
+  this->monomial_to_basic_matrix(a_matrix);
+  this->basic_to_local_matrix(b_matrix);
+  this->local_to_global_matrix(d_matrix);
 
   //Get the dofs
-  Vector<double> dofs(21,0.0);
+  Vector<double> dofs(this->n_basis_functions(),0.0);
   dofs=get_global_dofs(get_analyticfunction);
 
   // Fill in conversion matrix
-  for(unsigned i=0;i<21;++i)
-   for(unsigned j=0;j<36;++j)
-     for(unsigned k=0;k<21;++k)
-      for(unsigned l=0;l<36;++l)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
+   for(unsigned j=0;j<this->n_basic_basis_functions();++j)
+     for(unsigned k=0;k<this->n_basis_functions();++k)
+      for(unsigned l=0;l<this->n_basic_basis_functions();++l)
         conversion_matrix(i,j)+=d_matrix(i,k)*b_matrix(k,l)*a_matrix(l,j);
 
  //Loop over grid points
@@ -1411,14 +1491,14 @@ get_analyticfunction, const double& tol)
 
     // Now Sum over shape functions
     double aprox_w(0.0);
-    Shape p7 (36);
-    full_basis_monomials(s,p7);
+    Shape p7 (this->n_basic_basis_functions());
+    this->full_basis_monomials(s,p7);
 
-    for(unsigned i=0;i<21;++i)
+    for(unsigned i=0;i<this->n_basis_functions();++i)
      {
      // Get the shape functions
       // Loop over the conversion matrix
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Sum over
         aprox_w+=dofs[i]*conversion_matrix(i,k)*p7(k);
@@ -1427,7 +1507,7 @@ get_analyticfunction, const double& tol)
 
      // Compare
      Vector<double> w_exact(6,0.0),x(2);
-     f_k(s,x);
+     this->f_k(s,x);
      (*get_analyticfunction)(x,w_exact);
       if( fabs(aprox_w - w_exact[0])>tol )
         oomph_info<<"Non zero difference at: "<<s<<" "<<aprox_w-w_exact[0]<<"\n";
@@ -1442,7 +1522,7 @@ get_analyticfunction, const double& tol)
  {
   // Get the matrices
   //Get the dofs
-  Vector<double> dofs(21,0.0);
+  Vector<double> dofs(this->n_basis_functions(),0.0);
   dofs=get_basis_global_dofs(get_analyticfunction);
  //Loop over grid points
  const unsigned n_points=5;
@@ -1457,9 +1537,9 @@ get_analyticfunction, const double& tol)
      Shape psi(3,6),psib(3,1);
      DShape dpsi(3,6,2),dbpsi(3,1,2);
      DShape d2psi(3,6,3),d2bpsi(3,1,3);
-     d2_shape_dx2(s,psi,psib,dpsi,dbpsi, d2psi,d2bpsi);
-     d_shape_dx(s,psi,psib,dpsi,dbpsi);
-     shape(s,psi,psib);
+     this->d2_shape_dx2(s,psi,psib,dpsi,dbpsi, d2psi,d2bpsi);
+     this->d_shape_dx(s,psi,psib,dpsi,dbpsi);
+     this->shape(s,psi,psib);
       // Now Sum over shape functions
       Vector<double> aprox_w(6,0.0);
 
@@ -1485,7 +1565,7 @@ get_analyticfunction, const double& tol)
         aprox_w[5]+=dofs[18+k]*d2bpsi(k ,0,1);
         }
        // Compare
-       Vector<double> w_exact(6,0.0),x(2); f_k(s,x);
+       Vector<double> w_exact(6,0.0),x(2); this->f_k(s,x);
        (*get_analyticfunction)(x,w_exact);
        for(unsigned i=0;i<6;++i)
         if( fabs(aprox_w[i]- w_exact[i])>tol )
@@ -1497,8 +1577,8 @@ get_analyticfunction, const double& tol)
 void output_to_mathematica_graphics()
  {
  // Get copies of the private data
- VertexList vertices = get_vertices(); 
- double sobar(BernadouElementBasis::get_s_obar()), subar(BernadouElementBasis::get_s_ubar());
+ VertexList vertices = this->get_vertices(); 
+ double sobar(this->get_s_obar()), subar(this->get_s_ubar());
 
  // Open the file
  std::ofstream some_file;
@@ -1515,7 +1595,7 @@ void output_to_mathematica_graphics()
  some_file << "Show[Graphics[{Red,\n";
  some_file <<"Polygon[{\n";
  // The Curved Domain
- for (unsigned i=0;i<21;++i)
+ for (unsigned i=0;i<this->n_basis_functions();++i)
  {
   double s = i*(sobar-subar)/20. + subar;
   // Get chi
@@ -1529,7 +1609,7 @@ void output_to_mathematica_graphics()
  some_file<<"{"<<vertices[2][0]<<","<<vertices[2][1]<<"}}],"<<"\n";
 
  // The Normals
- for (unsigned i=0;i<21;++i)
+ for (unsigned i=0;i<this->n_basis_functions();++i)
  {
   double s = i*(sobar-subar)/20. + subar;
   // Get chi
@@ -1551,18 +1631,18 @@ void output_to_mathematica_graphics()
  some_file <<"Polygon[{\n";
 
  // The Curved Domain
- for (unsigned i=0;i<21;++i)
+ for (unsigned i=0;i<this->n_basis_functions();++i)
  {
   double s1 =1 -i/20.;
   // Get psi
-  Vector<double> mypsi_h(2); psi_h(s1,mypsi_h);
+  Vector<double> mypsi_h(2); this->psi_h(s1,mypsi_h);
   some_file<<"{"<<std::fixed
            <<(mypsi_h[0]) <<","<<(mypsi_h[1]) <<"},";
  }
  some_file<<"{"<<vertices[2][0]<<","<<vertices[2][1]<<"}}],"<<"\n";
 
  // The Normals
- for (unsigned i=0;i<21;++i)
+ for (unsigned i=0;i<this->n_basis_functions();++i)
  {
   double s =1 -i/20.;
   Vector<double> mypsi(2); psi(s,mypsi);
@@ -1579,25 +1659,25 @@ void output_to_mathematica_graphics()
  some_file << "Show[Graphics[{Black,\n";
  // Side 0
  some_file << "Arrow[{\n{"<<vertices[0][0]<<","<<vertices[0][1]<<"},\n";
- some_file << "{"<<vertices[0][0]+A1(0)<<","<<vertices[0][1]+A1(1)
+ some_file << "{"<<vertices[0][0]+ this->A1(0)<<","<<vertices[0][1]+ this->A1(1)
            <<"}}],\n";
  // Side 1
  some_file << "Arrow[{\n{"<<vertices[1][0]<<","<<vertices[1][1]<<"},\n";
- some_file << "{"<<vertices[1][0]+B2(0)<<","<<vertices[1][1]+B2(1)
+ some_file << "{"<<vertices[1][0]+ this->B2(0)<<","<<vertices[1][1]+ this->B2(1)
            <<"}}],\n";
 
  // Tangents
  some_file << "Arrow[{\n{"<<vertices[0][0]<<","<<vertices[0][1]<<"},\n";
- some_file << "{"<<vertices[0][0]+A2(0)<<","<<vertices[0][1]+A2(1)
+ some_file << "{"<<vertices[0][0]+ this->A2(0)<<","<<vertices[0][1]+ this->A2(1)
            <<"}}],\n";
 
  some_file << "Arrow[{\n{"<<vertices[1][0]<<","<<vertices[1][1]<<"},\n";
- some_file << "{"<<vertices[1][0]+B1(0)<<","<<vertices[1][1]+B1(1)
+ some_file << "{"<<vertices[1][0]+ this->B1(0)<<","<<vertices[1][1]+ this->B1(1)
            <<"}}],\n";
  // Side 2
  some_file << "Arrow[{\n{"<<vertices[0][0]<<","<<vertices[0][1]<<"},\n";
- some_file << "{"<<vertices[0][0]+A1(0)-B2(0)<<","
-           <<vertices[0][1]+A1(1)-B2(1)<<"}}]\n";
+ some_file << "{"<<vertices[0][0]+ this->A1(0)- this->B2(0)<<","
+           <<vertices[0][1]+ this->A1(1)- this->B2(1)<<"}}]\n";
  some_file<<"}]]"<<"\n";
 
  some_file << "Print[\"Triangle and normal using \\[Psi](s) (blue)\"]\n";
@@ -1605,18 +1685,18 @@ void output_to_mathematica_graphics()
  some_file <<"Polygon[{\n";
 
  // The Curved Domain
- for (unsigned i=0;i<21;++i)
+ for (unsigned i=0;i<this->n_basis_functions();++i)
  {
   // Get psi
   double s1 =1 -i/20.;
-  Vector<double> mypsi_h(2); psi_h(s1,mypsi_h);
+  Vector<double> mypsi_h(2); this->psi_h(s1,mypsi_h);
   some_file<<"{"<<std::fixed
            <<(mypsi_h[0]) <<","<<(mypsi_h[1]) <<"},";
  }
  some_file<<"{"<<vertices[2][0]<<","<<vertices[2][1]<<"}}],"<<"\n";
 
  // The Normals
- for (unsigned i=0;i<21;++i)
+ for (unsigned i=0;i<this->n_basis_functions();++i)
  {
   double s =1 -i/20.;
   Vector<double> mypsi(2); psi(s,mypsi);
@@ -1630,13 +1710,13 @@ void output_to_mathematica_graphics()
 
 // // Ouput A1 A2 B1 B2
 // oomph_info<<"A1:\n";
-// oomph_info<<A1()<<"\n";
+// oomph_info<< this->A1()<<"\n";
 // oomph_info<<"A2:\n";
-// oomph_info<<A2()<<"\n";
+// oomph_info<< this->A2()<<"\n";
 // oomph_info<<"B1:\n";
-// oomph_info<<B1()<<"\n";
+// oomph_info<< this->B1()<<"\n";
 // oomph_info<<"B2:\n";
-// oomph_info<<B2()<<"\n";
+// oomph_info<< this->B2()<<"\n";
 
  // TESTS FOR FK
  some_file << "Print[\"A number of points on the reference triangle (Blue)\"]\n";
@@ -1656,11 +1736,11 @@ void output_to_mathematica_graphics()
  some_file<<"Line[{{1,0},{0,1},{0,0},{1,0}}]}]]"<<"\n";
 
  // Should be affine for vertices
- Vector<double> s(2,0.0),x(2); s[0]=1; s[1]=0; f_k(s,x);
+ Vector<double> s(2,0.0),x(2); s[0]=1; s[1]=0; this->f_k(s,x);
  oomph_info<<"These should be the vertices:"<<x<<"\n";
- s[0]=0; s[1]=1; f_k(s,x);
+ s[0]=0; s[1]=1; this->f_k(s,x);
  oomph_info<<"             "<<x<<"\n";
- s[0]=0; s[1]=0; f_k(s,x);
+ s[0]=0; s[1]=0; this->f_k(s,x);
  oomph_info<<"             "<<x<<"\n";
 
  some_file << "Print[\"The same points on the curved triangle (Red)\"]\n";
@@ -1674,7 +1754,7 @@ void output_to_mathematica_graphics()
   s[0]= 0.1*i;
   for (double j=0;i+j<11;++j)
    {
-    s[1]= 0.1*j; f_k(s,x);
+    s[1]= 0.1*j; this->f_k(s,x);
     // Output to file
     some_file<<"{"<<std::fixed
              <<x[0]<<","<<x[1] <<"},\n";
@@ -1704,29 +1784,29 @@ void check_jacobian_and_hessian()
  {
   // The negative points in s0 direction
   Vector<double> s=locus,x(2);
-  s[0]-=i*h; f_k(s,x);
+  s[0]-=i*h; this->f_k(s,x);
   fk1_s0[2-i]=x[0]; 
   fk2_s0[2-i]=x[1];
   // Now the positive points in s0 direction
   s= locus;
-  s[0]+=i*h; f_k(s,x);
+  s[0]+=i*h; this->f_k(s,x);
   fk1_s0[2+i]=x[0];
   fk2_s0[2+i]=x[1];
   // The negative points in s1 direction
   s=locus;
-  s[1]-=i*h; f_k(s,x);
+  s[1]-=i*h; this->f_k(s,x);
   fk1_s1[2-i]=x[0];
   fk2_s1[2-i]=x[1];
   // Now the positive points in s1 direction
   s= locus;
-  s[1]+=i*h; f_k(s,x);
+  s[1]+=i*h; this->f_k(s,x);
   fk1_s1[2+i]=x[0]; 
   fk2_s1[2+i]=x[1];
  }
 
  // Check jacobian and Hessian are correct
  DenseMatrix<double> jacobian(2,2,0.0);
- get_basic_jacobian(locus,jacobian);
+ this->get_basic_jacobian(locus,jacobian);
   
  oomph_info<<"The Jacobian entries compared to FD jacobian:\n"
           <<jacobian(0,0)-dfdx_fd4(fk1_s0,h)<<" "
@@ -1743,7 +1823,7 @@ void check_jacobian_and_hessian()
   // The negative points in s0 direction
   Vector<double> s=locus;
   s[0]-=i*h;
-  get_basic_jacobian(s,jacobian);
+  this->get_basic_jacobian(s,jacobian);
   J11_s0[2-i]=jacobian(0,0); 
   J21_s0[2-i]=jacobian(1,0);
   J12_s0[2-i]=jacobian(0,1); 
@@ -1751,7 +1831,7 @@ void check_jacobian_and_hessian()
   // Now the positive points in s0 direction
   s= locus;
   s[0]+=i*h;
-  get_basic_jacobian(s,jacobian);
+  this->get_basic_jacobian(s,jacobian);
   J11_s0[2+i]=jacobian(0,0); 
   J21_s0[2+i]=jacobian(1,0);
   J12_s0[2+i]=jacobian(0,1); 
@@ -1759,7 +1839,7 @@ void check_jacobian_and_hessian()
   // The negative points in s1 direction
   s=locus;
   s[1]-=i*h;
-  get_basic_jacobian(s,jacobian);
+  this->get_basic_jacobian(s,jacobian);
   J11_s1[2-i]=jacobian(0,0); 
   J21_s1[2-i]=jacobian(1,0);
   J12_s1[2-i]=jacobian(0,1); 
@@ -1767,7 +1847,7 @@ void check_jacobian_and_hessian()
   // Now the positive points in s1 direction
   s= locus;
   s[1]+=i*h;
-  get_basic_jacobian(s,jacobian);
+  this->get_basic_jacobian(s,jacobian);
   J11_s1[2+i]=jacobian(0,0); 
   J21_s1[2+i]=jacobian(1,0);
   J12_s1[2+i]=jacobian(0,1); 
@@ -1776,7 +1856,7 @@ void check_jacobian_and_hessian()
  
  // Output Hessian entries
  RankThreeTensor<double> hess(2,2,2,0);
- get_basic_hessian(locus,hess);
+ this->get_basic_hessian(locus,hess);
  oomph_info<< "Hessian Entries minus finite differenced:\n";
  oomph_info<< hess(0,0,0)-dfdx_fd4(J11_s0,h)<< "," 
           << hess(0,1,0)-dfdx_fd4(J12_s0,h)<<"," 
@@ -1797,70 +1877,100 @@ void check_constant_consistency()
  // Check a tilde alpha
  oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- oomph_info<< B2(i) - A1(i) -a_tilde_1()*A1(i)
-             -a_tilde_2()*A2(i) <<(i==1? ")":","); 
+ oomph_info<<  this->B2(i) -  this->A1(i) -this->a_tilde_1()* this->A1(i)
+             -this->a_tilde_2()* this->A2(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
 
  // check a tilde tilde alpha
  oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- oomph_info<< -B1(i) -a_tildetilde_1()*A1(i)
-             -a_tildetilde_2()*A2(i) <<(i==1? ")":","); 
+ oomph_info<< - this->B1(i) -this->a_tildetilde_1()* this->A1(i)
+             -this->a_tildetilde_2()* this->A2(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
 
  // Check b tilde alpha
  oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- oomph_info<< -B2(i) + A1(i) -b_tilde_1()*B1(i)
-             -b_tilde_2()*B2(i) <<(i==1? ")":","); 
+ oomph_info<< - this->B2(i) +  this->A1(i) -this->b_tilde_1()* this->B1(i)
+             -this->b_tilde_2()* this->B2(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
 
  // check b tilde tilde alpha
  oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- oomph_info<< A2(i) -b_tildetilde_1()*B1(i)
-             -b_tildetilde_2()*B2(i) <<(i==1? ")":","); 
+ oomph_info<<  this->A2(i) -this->b_tildetilde_1()* this->B1(i)
+             -this->b_tildetilde_2()* this->B2(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
 
  // check c tilde alpha
  oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- oomph_info<< A2(i) +c_tilde_1()*B2(i)
-             +c_tilde_2()*A1(i) <<(i==1? ")":","); 
+ oomph_info<<  this->A2(i) +this->c_tilde_1()* this->B2(i)
+             +this->c_tilde_2()* this->A1(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
 
  // check b tilde tilde alpha
  oomph_info<<"(";
  for(unsigned i=0; i<2;++i)
- oomph_info<< B1(i) +c_tildetilde_1()*B2(i)
-             +c_tildetilde_2()*A1(i) <<(i==1? ")":","); 
+ oomph_info<<  this->B1(i) +this->c_tildetilde_1()* this->B2(i)
+             +this->c_tildetilde_2()* this->A1(i) <<(i==1? ")":","); 
  oomph_info<<"\n";
+
+ // Check D1 and D2 TEMPLATE
+ std::cout<<"Check the HIGHER ORDER constants.\n";
+ // check a u_tilde alpha
+ std::cout<<"(";
+ Vector<double> d1(2,0.0),d2(2,0.0);
+  this->D1(d1);  this->D2(d2);
+
+ for(unsigned i=0; i<2;++i)
+ std::cout<< -d1[i] +this->a_utilde_1()* this->A1(i)
+             +this->a_utilde_2()* this->A2(i) <<(i==1? ")":","); 
+ std::cout<<"\n";
+
+   std::cout <<"Now test D1 and then D2 :\n";
+   Vector<double> d2_chi_subar(2,0.0),d2_chi_sobar(2,0.0);
+   Parametric_curve_pt->d2position(Vector<double>(1,this->get_s_ubar()),d2_chi_subar);
+   Parametric_curve_pt->d2position(Vector<double>(1,this->get_s_obar()),d2_chi_sobar);
+   const double delta_s = this->get_s_obar() -this->get_s_ubar();
+
+   std::cout <<"["<<d1[0] - d2_chi_subar[0] * std::pow(delta_s,2) <<","
+                  <<d1[1] - d2_chi_subar[1] * std::pow(delta_s,2) <<"]\n";
+   std::cout <<"["<<d2[0] - d2_chi_sobar[0] * std::pow(delta_s,2) <<","
+                  <<d2[1] - d2_chi_sobar[1] * std::pow(delta_s,2) <<"]\n";
+
+ // check b u_tilde alpha
+ std::cout<<"(";
+ for(unsigned i=0; i<2;++i)
+ std::cout<< -d2[i] +this->b_utilde_1()* this->B1(i)
+             +this->b_utilde_2()* this->B2(i) <<(i==1? ")":","); 
+ std::cout<<"\n";
 
  // Check the eccentricity parameters
  //First we check that the normals are indeed normal
  oomph_info<<"\nThe altitude vectors:\n";
- oomph_info<<"["<< altitude_vector_1(0)<<","<<altitude_vector_1(1)
+ oomph_info<<"["<< this->altitude_vector_1(0)<<","<<this->altitude_vector_1(1)
           <<"]\n";
- oomph_info<<"["<< altitude_vector_2(0)<<","<<altitude_vector_2(1)
+ oomph_info<<"["<< this->altitude_vector_2(0)<<","<<this->altitude_vector_2(1)
           <<"]\n";
  oomph_info<<"\nThe dot products with the tangents should be zero:\n";
- oomph_info<< B2(0)*altitude_vector_1(0)
-           + B2(1)*altitude_vector_1(1)<<"\n";
- oomph_info<< A1(0)*altitude_vector_2(0)
-           + A1(1)*altitude_vector_2(1)<<"\n";
+ oomph_info<<  this->B2(0)*this->altitude_vector_1(0)
+           +  this->B2(1)*this->altitude_vector_1(1)<<"\n";
+ oomph_info<<  this->A1(0)*this->altitude_vector_2(0)
+           +  this->A1(1)*this->altitude_vector_2(1)<<"\n";
  
  oomph_info<<"\nThe (signed) altitudes:\n"
-          << altitude_1()<<" "<<altitude_2()<<"\n"; 
+          << this->altitude_1()<<" "<<this->altitude_2()<<"\n"; 
  oomph_info<<"\nThe altitudes:\n";
- oomph_info<<sqrt(pow(altitude_vector_1(0),2)
-                   +pow(altitude_vector_1(1),2))<<" "
-          <<sqrt(pow(altitude_vector_2(0),2)
-                   +pow(altitude_vector_2(1),2))<<"\n";
+ oomph_info<<sqrt(pow(this->altitude_vector_1(0),2)
+                   +pow(this->altitude_vector_1(1),2))<<" "
+          <<sqrt(pow(this->altitude_vector_2(0),2)
+                   +pow(this->altitude_vector_2(1),2))<<"\n";
  oomph_info<<"Check the length is equal to the altitude vector length:\n";
- oomph_info<< pow(altitude_vector_1(0),2)+pow(altitude_vector_1(1),2)
-           - pow(altitude_1(),2)<<"\n"; 
- oomph_info<< pow(altitude_vector_2(0),2)+pow(altitude_vector_2(1),2)
-           - pow(altitude_2(),2)<<"\n"; 
+ oomph_info<< pow(this->altitude_vector_1(0),2)+pow(this->altitude_vector_1(1),2)
+           - pow(this->altitude_1(),2)<<"\n"; 
+ oomph_info<< pow(this->altitude_vector_2(0),2)+pow(this->altitude_vector_2(1),2)
+           - pow(this->altitude_2(),2)<<"\n"; 
  oomph_info<<"Now check the eccentricity parameters (3 tests each): \n";
 
  // The eccentricity parameter check
@@ -1869,110 +1979,54 @@ void check_constant_consistency()
  for(unsigned i=0; i<2; ++i)
   {
    // B2 dot B2
-   B2B2 += B2(i)*B2(i);
-   A1A1 += A1(i)*A1(i);
+   B2B2 +=  this->B2(i)* this->B2(i);
+   A1A1 +=  this->A1(i)* this->A1(i);
    // v2 dot B2
-   v2B2 +=  ( B2(i)-A1(i)-altitude_vector_1(i))*B2(i);
-   v1A1 +=  (-B2(i)+A1(i)-altitude_vector_2(i))*A1(i);
+   v2B2 +=  (  this->B2(i)- this->A1(i)-this->altitude_vector_1(i))* this->B2(i);
+   v1A1 +=  (- this->B2(i)+ this->A1(i)-this->altitude_vector_2(i))* this->A1(i);
   }
   // Run three tests on eta
   oomph_info<<"\nTest eta_1 (should give zeros):\n";
-  oomph_info<< eta_1()-2.0*v2B2/B2B2+1.0<<"\n";
-  //oomph_info<< eta_1()-2*r1+1<<"\n";
+  oomph_info<< this->eta_1()-2.0*v2B2/B2B2+1.0<<"\n";
+  //oomph_info<< this->eta_1()-2*r1+1<<"\n";
   // By pythagoras we should have:
-  // B2.B2 = h2^2 + B2.B2 ((1-eta_1)/2)^2
-  oomph_info<<pow(0.5*(1.0-eta_1()),2)*B2B2+pow(altitude_1(),2)-A1A1<<"\n";
+  // B2.B2 = h2^2 + B2.B2 ((1-this->eta_1)/2)^2
+  oomph_info<<pow(0.5*(1.0-this->eta_1()),2)*B2B2+pow(this->altitude_1(),2)-A1A1<<"\n";
   // Rearrange: 
   // n1 . B2 = 0 = -A1.B2 + 0.5*(1+eta_1) B2.B2
-  oomph_info<< eta_1()-(1-2*(A1(0)*B2(0)+A1(1)*B2(1))/(B2B2))<<"\n";
+  oomph_info<< this->eta_1()-(1-2*( this->A1(0)* this->B2(0)+ this->A1(1)* this->B2(1))/(B2B2))<<"\n";
 
   oomph_info<<"\nTest eta_2 (should give zeros):\n";
-  oomph_info<< eta_2()+2*v1A1/A1A1-1<<"\n";
+  oomph_info<< this->eta_2()+2*v1A1/A1A1-1<<"\n";
   // By pythagoras we should have:
-  // A1.A1 = h1^2 + B2.B2 ((1-eta_1)/2)^2
-  oomph_info<<pow(0.5*(1.0+eta_2()),2)*A1A1+pow(altitude_2(),2)-B2B2<<"\n";
+  // A1.A1 = h1^2 + B2.B2 ((1-this->eta_1)/2)^2
+  oomph_info<<pow(0.5*(1.0+this->eta_2()),2)*A1A1+pow(this->altitude_2(),2)-B2B2<<"\n";
   // Rearrange: 
-  // n2 . A1 = 0 = -B2.A1 + 0.5*(1+eta_2) A1.A1
-  oomph_info<< eta_2()-(-1+2*(A1(0)*B2(0)+A1(1)*B2(1))/(A1A1))<<"\n";
+  // n2 . A1 = 0 = -B2.A1 + 0.5*(1+this->eta_2) A1.A1
+  oomph_info<< this->eta_2()-(-1+2*( this->A1(0)* this->B2(0)+ this->A1(1)* this->B2(1))/(A1A1))<<"\n";
  }
  }
 
-// Check the Traces against what we would expect
-void check_f3_trace(const double& tol)
-{
- // Now we check G3 using the other submatrices
- // Get the B3 matrix
- DenseMatrix<double> B2 (21,6,0.0);
- basic_to_local_submatrix_2(B2);
-
- DenseMatrix<double> B3 (21,9,0.0);
- basic_to_local_submatrix_3(B3);
-
- const unsigned n_points=11;
- // Loop over some points
- for(unsigned i=0; i<n_points;++i)
-  {
-   // Initialise position vector
-   double t=1.0*i*1./(n_points-1);
-   // Now initialise the B3 matrix
-   Vector<double> f3(21,0.0);
-   f3=f_3(t);
-
-   // Get 1d shape
-   Shape psi(6);
-   hermite_shape_1d_5(t,psi);
-
-   // Now initialise f3
-   Vector<double> f3_exact(21,0.0);
-   for(unsigned j=0;j<21;++j)
-    {
-     // Function at node 0
-     if(j==0)
-      {f3_exact[j]+= psi[1];}
-     // Function at node 1
-     if(j==1)
-      {f3_exact[j]+= psi[0];}
-
-     // D2 w (a0)(n,t) derivative at node 0
-     f3_exact[j]-=(-B2(j,0)+B2(j,1))*psi[3];
-     // D2 w (a1)(n,t) derivative at node 1
-     f3_exact[j]+=(B2(j,2)-B2(j,3))*psi[2];
-
-     // D2 w (a0)(n,t) derivative at node 0
-     f3_exact[j]+=(B3(j,0)-2*B3(j,1)+B3(j,2))*psi[5];
-     // D2 w (a1)(n,t) derivative at node 1
-     f3_exact[j]+=(B3(j,3)-2*B3(j,4)+B3(j,5))*psi[4];
-    }
-
-  // Now compare exact with aprox.
-  for(unsigned j=0;j<21;++j)
-   {
-    if(std::abs(f3_exact[j]-f3[j])>0)
-      oomph_info<<"Non zero difference for f3_exact at dof: "<<j
-               << " diff: "<<f3_exact[j]-f3[j]<<"\n";
-   }
-  }
-}
 
 // Return the global dofs of a function on an element
 double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
  {
   // Get the matrices
-  DenseMatrix<double> b_matrix (21,36,0.0);
-  DenseMatrix<double> d_matrix (21,21,0.0);
-  DenseMatrix<double> conversion_matrix (21,36,0.0);
-  DenseMatrix<double> gl2basic_matrix (21,36,0.0);
-  basic_to_local_matrix(b_matrix);
-  local_to_global_matrix(d_matrix);
+  DenseMatrix<double> b_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
+  DenseMatrix<double> d_matrix (this->n_basis_functions(),this->n_basis_functions(),0.0);
+  DenseMatrix<double> conversion_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
+  DenseMatrix<double> gl2basic_matrix (this->n_basis_functions(),this->n_basic_basis_functions(),0.0);
+  this->basic_to_local_matrix(b_matrix);
+  this->local_to_global_matrix(d_matrix);
 
   //Get the dofs
-  Vector<double> dofs(21,0.0);
+  Vector<double> dofs(this->n_basis_functions(),0.0);
   dofs=get_global_dofs(get_analyticfunction);
 
   // Fill in conversion matrix
-  for(unsigned i=0;i<21;++i)
-   for(unsigned j=0;j<36;++j)
-     for(unsigned k=0;k<21;++k)
+  for(unsigned i=0;i<this->n_basis_functions();++i)
+   for(unsigned j=0;j<this->n_basic_basis_functions();++j)
+     for(unsigned k=0;k<this->n_basis_functions();++k)
         conversion_matrix(i,j)+=d_matrix(i,k)*b_matrix(k,j);
 
  // Open octave file
@@ -1994,14 +2048,14 @@ double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
 
     // Now Sum over shape functions
     double aprox_w(0.0);
-    Shape p7 (36);
-    full_basic_polynomials(s,p7);
+    Shape p7 (this->n_basic_basis_functions());
+    this->full_basic_polynomials(s,p7);
 
-    for(unsigned i=0;i<21;++i)
+    for(unsigned i=0;i<this->n_basis_functions();++i)
      {
      // Get the shape functions
       // Loop over the conversion matrix
-      for (unsigned k=0; k<36; ++k)
+      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
        {
         // Sum over
         aprox_w+=dofs[i]*conversion_matrix(i,k)*p7(k);
@@ -2010,7 +2064,7 @@ double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
 
      // Compare
      Vector<double> w_exact(6,0.0),x(2);
-     f_k(s,x);
+     this->f_k(s,x);
      (*get_analyticfunction)(x,w_exact);
      some_file<<s[0]<<" "<<s[1]<<" "<<w_exact[0]<<" "<<aprox_w<<" " <<
                 aprox_w - w_exact[0]<<"\n";
@@ -2035,19 +2089,19 @@ double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
 
    // Now Sum over shape functions
    double aprox_w(0.0);
-   Shape p7 (36);
-   full_basic_polynomials(s,p7);
+   Shape p7 (this->n_basic_basis_functions());
+   this->full_basic_polynomials(s,p7);
    // Get Jacobian
    DenseMatrix<double> jacobian(2,2,0.0);
-   get_basic_jacobian(s,jacobian);
+   this->get_basic_jacobian(s,jacobian);
    // Get det
    const double J = jacobian(0,0)*jacobian(1,1) - jacobian(0,1)*jacobian(1,0);
 
-   for(unsigned i=0;i<21;++i)
+   for(unsigned i=0;i<this->n_basis_functions();++i)
     {
     // Get the shape functions
      // Loop over the conversion matrix
-     for (unsigned k=0; k<36; ++k)
+     for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
       {
        // Sum over
        aprox_w+=dofs[i]*conversion_matrix(i,k)*p7(k);
@@ -2056,7 +2110,7 @@ double check_function_norm(const ExactSolnFctPt& get_analyticfunction)
 
    // Compare
    Vector<double> w_exact(6,0.0),x(2);
-   f_k(s,x);
+   this->f_k(s,x);
    (*get_analyticfunction)(x,w_exact);
 
    integrated_squared_error+=(w_exact[0]-aprox_w)*(w_exact[0]-aprox_w)*weight*J;
