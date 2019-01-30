@@ -79,6 +79,74 @@ public:
  { dx[0] =0;  dx[1] =(6.0*s[0]);};
 };
 
+
+/// \short Specialisation of CurvilineGeomObject for half a circle.
+class CurvilineQuartic : public CurvilineGeomObject
+{
+public:
+  /// Constructor
+  CurvilineQuartic() {};
+
+  /// Destructor
+  ~CurvilineQuartic() {};
+
+ /// Broken copy constructor
+ CurvilineQuartic(const CurvilineQuartic& dummy) 
+  { 
+   BrokenCopy::broken_copy("CurvilineQuartic");
+  } 
+ 
+ /// Broken assignment operator
+ void operator=(const CurvilineQuartic&) 
+  {
+   BrokenCopy::broken_assign("CurvilineQuartic");
+  }
+ /// Parametric function
+ void position(const Vector<double>& s, Vector<double>& x) const
+  { x[0] =-s[0]; x[1] =-s[0]*s[0]*(s[0]*s[0]- 1)+2;};
+ 
+ /// Derivative of parametric function
+ void dposition(const Vector<double>& s, Vector<double>& dx) const
+ { dx[0] =-1;  dx[1] =-s[0]*s[0]*(4*s[0]*s[0] - 3);};
+ 
+ /// Derivative of parametric function
+ void d2position(const Vector<double>& s, Vector<double>& dx) const 
+  { dx[0] =0;  dx[1] =-s[0]*s[0]*(12*s[0]) + 6*s[0];};
+};
+
+/// \short Specialisation of CurvilineGeomObject for half a circle.
+class CurvilineQuintic : public CurvilineGeomObject
+{
+public:
+  /// Constructor
+  CurvilineQuintic() {};
+
+  /// Destructor
+  ~CurvilineQuintic() {};
+
+ /// Broken copy constructor
+ CurvilineQuintic(const CurvilineQuintic& dummy) 
+  { 
+   BrokenCopy::broken_copy("CurvilineQuintic");
+  } 
+ 
+ /// Broken assignment operator
+ void operator=(const CurvilineQuintic&) 
+  {
+   BrokenCopy::broken_assign("CurvilineQuintic");
+  }
+ /// Parametric function
+ void position(const Vector<double>& s, Vector<double>& x) const
+  { x[0] =-s[0];/*-s[0]*s[0]*s[0];*/  x[1] =-s[0]*s[0]*s[0]*(s[0]*s[0]- 1)+2;};
+ 
+ /// Derivative of parametric function
+ void dposition(const Vector<double>& s, Vector<double>& dx) const
+ { dx[0] =-1;/*-3*s[0]*s[0];*/  dx[1] =-s[0]*s[0]*(5*s[0]*s[0] - 3);};
+ 
+ /// Derivative of parametric function
+ void d2position(const Vector<double>& s, Vector<double>& dx) const 
+  { dx[0] =0;/*-6*s[0];*/  dx[1] =-s[0]*s[0]*(20*s[0]) + 6*s[0];};
+};
 /// \short Specialisation of CurvilineGeomObject for half a circle.
 class CurvilineCircleRight : public CurvilineGeomObject
 {

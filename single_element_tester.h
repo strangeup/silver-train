@@ -149,6 +149,9 @@ public:
   /// Fill in local dof positions
   inline void fill_in_local_internal_dofs_position(VertexList& local_dofs_position);
 
+  /// Fill in local dof positions
+  inline void fill_in_local_argyris_redundant_dofs_position(VertexList& local_dofs_position);
+
   /// Get position as a function of parametric coordinate, removed from final element
   inline void chi (const double& s, Vector<double>& psi) const
    {Parametric_curve_pt->position(Vector<double>(1,s),psi);}
@@ -240,7 +243,7 @@ Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
  {
   //Initialise
   Vector<Vector<double> > ai(3,Vector<double>(2,0.0)), ei,
-                          w_at_xi(6,Vector<double> (6,0.0));
+                          w_at_xi(3+this->n_internal_dofs(),Vector<double> (6,0.0));
   ai=this->get_vertices();
   Vector<double> gdofs(this->n_basis_functions(),0.0);
 
@@ -283,21 +286,28 @@ Vector<double> get_basis_global_dofs(const ExactSolnFctPt& w)
  }
 // These next two won't be pretty.
 
-// THIS should have two template versions (significant differences I think)
 // Return the global dofs of a function on an element
 void check_basic_shape(const double& tol)
  {
+  // Number of ei
+  const unsigned n_bdofs = this->n_basic_basis_functions();
+  const unsigned n_ndofs = 3;
+  const unsigned n_edofs = this->n_internal_dofs();
+  // At these points we also have normal dofs
+  const unsigned n_ddofs = (n_bdofs-18-n_edofs-n_ndofs)/2;
+   
+  // Number of di 
   //Initialise
-  Vector<double> bdofs(this->n_basic_basis_functions(),0.0);
-  Vector<Vector<double> > ai(3,Vector<double>(2,0.0)),
-    ei(3,Vector<double>(2,0.25)), ni(3,Vector<double>(2,0.0)),
-    bi(3,Vector<double>(2,0.5)),di(6,Vector<double>(2,0.0));
+  Vector<double> bdofs(n_bdofs,0.0);
+  VertexList ai(n_ndofs,Vector<double>(2,0.0)),
+    ei(n_edofs,Vector<double>(2,0.25)), ni(3,Vector<double>(2,0.0)),
+    bi(3,Vector<double>(2,0.5)),di(n_ddofs,Vector<double>(2,0.0));
 
   // fill in ai (local)
   ai[0][0]=1.0;  ai[1][1]=1.0;
 
   // Fill in ei
-  ei[0][0]=0.5;  ei[1][1]=0.5;
+  fill_in_local_internal_dofs_position(ei);
 
   // Fill in bi
   bi[0][0]=0.0;  bi[1][1]=0.0;
@@ -308,22 +318,19 @@ void check_basic_shape(const double& tol)
   ni[2][0]= std::sqrt(2.)/2.;
   ni[2][1]= std::sqrt(2.)/2.;
 
-  // Fill in di
-  di[0][0]=0.0;   di[0][1]=0.75;
-  di[1][0]=0.0;   di[1][1]=0.25;
-  di[2][0]=0.25;  di[2][1]=0.0;
-  di[3][0]=0.75;  di[3][1]=0.0;
-  di[4][0]=0.75;  di[4][1]=0.25;
-  di[5][0]=0.25;  di[5][1]=0.75;
+  // Fill in ei
+  this->fill_in_local_argyris_redundant_dofs_position(di);
 
+  // Side 1
   // Get the shape functions
-  Shape p7 (this->n_basic_basis_functions()), m7 (this->n_basic_basis_functions());
-  DShape dp7 (this->n_basic_basis_functions(),2), dm7 (this->n_basic_basis_functions(),2), d2p7 (this->n_basic_basis_functions(),3), d2m7 (this->n_basic_basis_functions(),3);
-  DenseMatrix<double> a_matrix (this->n_basic_basis_functions(),this->n_basic_basis_functions(),0.0);
+  Shape p7 (n_bdofs), m7 (n_bdofs);
+
+  DShape dp7 (n_bdofs,2), dm7 (n_bdofs,2), d2p7 (n_bdofs,3), d2m7 (n_bdofs,3);
+  DenseMatrix<double> a_matrix (n_bdofs,n_bdofs,0.0);
   this->monomial_to_basic_matrix(a_matrix);
 
   // Shape function dofs
-  DenseMatrix<double> shape_dofs(this->n_basic_basis_functions(),this->n_basic_basis_functions(),0.0);
+  DenseMatrix<double> shape_dofs(n_bdofs,n_bdofs,0.0);
 
   // Do the ai
   for(unsigned i=0; i<3;++i)
@@ -331,10 +338,10 @@ void check_basic_shape(const double& tol)
     // Construct shape functions
     this->full_basis_monomials(ai[i],p7);
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         m7(j)+=a_matrix(j,k)*p7(k);
@@ -349,14 +356,14 @@ void check_basic_shape(const double& tol)
    {
     // Construct shape functions
     this->dfull_basis_monomials(ai[i],dp7);
- //   for(unsigned k=0;k<this->n_basic_basis_functions();++k)
+ //   for(unsigned k=0;k<n_bdofs;++k)
  //       oomph_info<<dp7(k,0)<<" "<<dp7(k,1)<<"\n";
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         dm7(j,0)+=a_matrix(j,k)*dp7(k,0);
@@ -365,9 +372,9 @@ void check_basic_shape(const double& tol)
      }
 
     // Fill in matrix entries
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
       shape_dofs(3+2*i,j)=dm7(j,0);
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
       shape_dofs(4+2*i,j)=dm7(j,1);
    }
 
@@ -376,15 +383,15 @@ void check_basic_shape(const double& tol)
    {
     // Construct shape functions
     this->d2full_basis_monomials(ai[i],d2p7);
-  //  for(unsigned k=0;k<this->n_basic_basis_functions();++k)
+  //  for(unsigned k=0;k<n_bdofs;++k)
   //      oomph_info<<d2p7(k,0)<<" "<<d2p7(k,1)<<" "<<d2p7(k,2)<<"\n";
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       d2m7(j,0)=0.0;
       d2m7(j,1)=0.0;
       d2m7(j,2)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         d2m7(j,0)+=a_matrix(j,k)*d2p7(k,0);
@@ -404,11 +411,11 @@ void check_basic_shape(const double& tol)
     // Construct shape functions
     this->dfull_basis_monomials(bi[i],dp7);
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         dm7(j,0)+=a_matrix(j,k)*dp7(k,0);
@@ -420,73 +427,74 @@ void check_basic_shape(const double& tol)
    }
 
   // Do the dis
-  for(unsigned i=0; i<6;++i)
+  for(unsigned i=0; i<n_ddofs;++i)
    {
     // Construct shape functions
     this->full_basis_monomials(di[i],p7);
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         m7(j)+=a_matrix(j,k)*p7(k);
        }
       // Fill in matrix entries
-      shape_dofs(this->n_basis_functions()+i,j)=m7(j);
+      shape_dofs(21+i,j)=m7(j);
      }
    }
 
   // Do the bi
-  for(unsigned i=0; i<6;++i)
+  for(unsigned i=0; i<n_ddofs;++i)
    {
     // Construct shape functions
     this->dfull_basis_monomials(di[i],dp7);
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       dm7(j,0)=0.0;
       dm7(j,1)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         dm7(j,0)+=a_matrix(j,k)*dp7(k,0);
         dm7(j,1)+=a_matrix(j,k)*dp7(k,1);
        }
       // Fill in matrix entries
-      shape_dofs(27+i,j)=dm7(j,0)*ni[i/2][0]+dm7(j,1)*ni[i/2][1];
+      const unsigned iside = i / (n_ddofs/3);
+      shape_dofs(21+n_ddofs+i,j)=dm7(j,0)*ni[iside][0]+dm7(j,1)*ni[iside][1];
      }
    }
 
   // Do the eis
-  for(unsigned i=0; i<3;++i)
+  for(unsigned i=0; i<n_edofs;++i)
    {
     // Construct shape functions
     this->full_basis_monomials(ei[i],p7);
 
-    for (unsigned j=0; j<this->n_basic_basis_functions(); ++j)
+    for (unsigned j=0; j<n_bdofs; ++j)
      {
       m7(j)=0.0;
-      for (unsigned k=0; k<this->n_basic_basis_functions(); ++k)
+      for (unsigned k=0; k<n_bdofs; ++k)
        {
         // Fill in basis at ai
         m7(j)+=a_matrix(j,k)*p7(k);
        }
     // Fill in matrix entries
-    shape_dofs(33+i,j)=m7(j);
+    shape_dofs(21+2*n_ddofs+i,j)=m7(j);
     }
    }
 
   //Output any non zeros
   oomph_info<<"\n";
-  for(unsigned i=0;i<this->n_basis_functions();++i)
-    for(unsigned j=0;j<this->n_basis_functions();++j)
-      oomph_info<<(fabs(shape_dofs(i,j))>1e-11? shape_dofs(i,j): 0.0 )<<(j!=20 ? " ":"\n");
+  for(unsigned i=0;i<n_bdofs;++i)
+    for(unsigned j=0;j<n_bdofs;++j)
+      oomph_info<<(fabs(shape_dofs(i,j))>1e-10? shape_dofs(i,j): 0.0 )<<(j!=n_bdofs-1 ? " ":"\n");
 
   //Output any non zeros
-  for(unsigned i=0;i<this->n_basic_basis_functions();++i)
-    for(unsigned j=0;j<this->n_basic_basis_functions();++j)
+  for(unsigned i=0;i<n_bdofs;++i)
+    for(unsigned j=0;j<n_bdofs;++j)
       if(std::abs(shape_dofs(i,j)-((i==j)?1.0:0.0))>tol)
         oomph_info/*<<std::scientific*/
                  <<"Nonzero difference at ("<<i<<","<<j<<"): "
@@ -1090,7 +1098,7 @@ void check_g3_trace(const double& tol)
 void check_shape(const double& tol)
  {
   //Initialise
-  Vector<Vector<double> > ei(3,Vector<double>(2,0.25)),
+  Vector<Vector<double> > ei(this->n_internal_dofs(),Vector<double>(2,0.25)),
                           ai(3,Vector<double>(2,0.0));
   Vector<double> bdofs(this->n_basic_basis_functions(),0.0);
 
@@ -1098,7 +1106,7 @@ void check_shape(const double& tol)
   ai[0][0]=1.0; ai[1][1]=1.0;
 
   // Fill in ei
-  ei[0][0]=0.5 ; ei[1][1]=0.5;
+  fill_in_local_internal_dofs_position(ei); 
 
   // Get the shape functions
   Shape p7 (this->n_basic_basis_functions()), m7 (this->n_basic_basis_functions());
@@ -1518,10 +1526,12 @@ get_analyticfunction, const double& tol)
 void check_basis_function(const ExactSolnFctPt&
 get_analyticfunction, const double& tol)
  {
-  // Get the matrices
-  //Get the dofs
-  Vector<double> dofs(this->n_basis_functions(),0.0);
-  dofs=get_basis_global_dofs(get_analyticfunction);
+ // Get the matrices
+ //Get the dofs
+ Vector<double> dofs(this->n_basis_functions(),0.0);
+ dofs=get_basis_global_dofs(get_analyticfunction);
+ // Number of internal dofs (local copy)
+ const unsigned n_bubble_dofs = this->n_internal_dofs();
  //Loop over grid points
  const unsigned n_points=5;
  for(unsigned k=0;k<n_points;++k)
@@ -1532,9 +1542,9 @@ get_analyticfunction, const double& tol)
      double s1(1.0/(n_points-1)*l);
      // The position on the basic element
      Vector<double> s(2,0.0); s[0]=s0; s[1]=s1;
-     Shape psi(3,6),psib(3,1);
-     DShape dpsi(3,6,2),dbpsi(3,1,2);
-     DShape d2psi(3,6,3),d2bpsi(3,1,3);
+     Shape psi(3,6),psib(n_bubble_dofs,1);
+     DShape dpsi(3,6,2),dbpsi(n_bubble_dofs,1,2);
+     DShape d2psi(3,6,3),d2bpsi(n_bubble_dofs,1,3);
      this->d2_shape_dx2(s,psi,psib,dpsi,dbpsi, d2psi,d2bpsi);
      this->d_shape_dx(s,psi,psib,dpsi,dbpsi);
      this->shape(s,psi,psib);
@@ -1553,7 +1563,7 @@ get_analyticfunction, const double& tol)
         aprox_w[4]+=dofs[k]*d2psi(k / 6,k % 6,2);
         aprox_w[5]+=dofs[k]*d2psi(k / 6,k % 6,1);
         }
-      for(unsigned k=0;k<3;++k)
+      for(unsigned k=0;k<n_bubble_dofs;++k)
         {
         aprox_w[0]+=dofs[18+k]*psib(k ,0);
         aprox_w[1]+=dofs[18+k]*dbpsi(k ,0,0);
@@ -2150,6 +2160,51 @@ void BernadouElementTestBasis<5>::fill_in_local_internal_dofs_position(VertexLis
   ei[8][0]=1/3.;  ei[8][1]=1/2.;
                      
   ei[9][0]=1/3.;  ei[9][1]=1/3.;
+  }
+
+
+// Fill in di
+template<>
+void BernadouElementTestBasis<3>::fill_in_local_argyris_redundant_dofs_position(VertexList& di)
+  {
+  // Cheat using assignment 
+  di=VertexList(6,Vector<double>(2,0.0));
+  di[0][1]=3/4.;
+  di[1][1]=1/4.;
+                
+  di[2][0]=1/4.;
+  di[3][0]=3/4.;
+                
+  di[4][0]=3/4.;
+  di[5][0]=1/4.;
+  di[4][1]=1/4.;
+  di[5][1]=3/4.;
+  }
+
+// Fill in di
+template<>
+void BernadouElementTestBasis<5>::fill_in_local_argyris_redundant_dofs_position(VertexList& di)
+  {
+  // Cheat using assignment 
+  di=VertexList(12,Vector<double>(2,0.0));
+  di[0][1]=5/6.;
+  di[1][1]=2/3.;
+  di[2][1]=1/3.;
+  di[3][1]=1/6.;
+                
+  di[4][0]=1/6.;
+  di[5][0]=1/3.;
+  di[6][0]=2/3.;
+  di[7][0]=5/6.;
+
+  di[8][0]=5/6.;
+  di[9][0]=2/3.;
+  di[10][0]=1/3.;
+  di[11][0]=1/6.;
+  di[8][1]=1/6.;
+  di[9][1]=1/3.;
+  di[10][1]=2/3.;
+  di[11][1]=5/6.;
   }
 } // end c1_curved_checks namespace
 } //end namespace expansion (oomph)

@@ -307,7 +307,8 @@ int main(int argc, char **argv)
  // Set up the parametric function
  // CurvilineCircleTop parametric_curve;
  // CurvilineQuadratic parametric_curve;
- CurvilineCubic parametric_curve;
+ // CurvilineCubic parametric_curve;
+ CurvilineQuintic parametric_curve;
  double s_ubar(-0.5), s_obar(0.5);
 
  // Vertices for test triangle
@@ -321,7 +322,7 @@ int main(int argc, char **argv)
  oomph_info<<"Vertices"<<vertices<<"\n";
 
  // Set up the problem
- BernadouElementTestBasis<3> bernadou_test_basis;
+ BernadouElementTestBasis<5> bernadou_test_basis;
  bernadou_test_basis.upgrade_element(vertices,s_ubar,s_obar,parametric_curve);
 
  // Output the element to Mathematica
