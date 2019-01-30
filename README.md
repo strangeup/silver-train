@@ -3,12 +3,13 @@
 * The main part of this repo will be the C1TestBasis class
 
 # Heirarchy
-
-   =======[ Order ]
-  | C1Basis |
-   =========
-      ^
-      |
- ===========[ Order ]
-| C1TestBasis |
- ============
+```
+\\    =======[ Order ] 
+\\   | C1Basis |
+\\    =========
+\\       ^
+\\       |
+\\  ===========[ Order ]
+\\ | C1TestBasis |
+\\  ============
+```
