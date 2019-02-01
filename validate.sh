@@ -5,7 +5,7 @@ OOMPH_ROOT_DIR=$(make -s --no-print-directory print-top_builddir)
 
 
 #Set the number of tests to be checked
-NUM_TESTS=2
+NUM_TESTS=3
 
 
 # Setup validation directory
@@ -61,6 +61,27 @@ else
   multiple_element_tester_p5_results.dat  >> validation.log
 fi
 
+# Validation for Bell Basis
+#----------------------------
+echo "Running Bell Basis validation "
+../bell_element_tester > OUTPUT_bell_element_tester
+echo "done"
+echo " " >> validation.log
+echo "Bell basis validation" >> validation.log
+echo "------------------------------------------" >> validation.log
+echo " " >> validation.log
+echo "Validation directory: " >> validation.log
+echo " " >> validation.log
+echo "  " `pwd` >> validation.log
+echo " " >> validation.log
+cat RESLT/trace_bell.dat > bell_tester_results.dat
+
+if test "$1" = "no_fpdiff"; then
+  echo "dummy [OK] -- Can't run fpdiff.py because we don't have python or validata" >> validation.log
+else
+  ../../../bin/fpdiff.py ../validata/bell_tester_result.dat.gz  \
+  bell_tester_results.dat  >> validation.log
+fi
 
 # Append output to global validation log file
 #--------------------------------------------
