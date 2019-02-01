@@ -1,15 +1,19 @@
 # Name of executables: The prefix "noinst" means the executables don't
 # have to be installed anywhere.
-noinst_PROGRAMS =  single_element_tester
+noinst_PROGRAMS =  single_element_tester multiple_element_tester bell_element_tester
 include $(top_srcdir)/config/makefile_templates/demo_drivers
 #---------------------------------------------------------------------------
 
 # Local sources that Jack's Poisson code depends on:
 single_element_tester_SOURCES = single_element_tester.cc 
+multiple_element_tester_SOURCES = multiple_element_tester.cc 
+bell_element_tester_SOURCES = bell_element_checker.cc 
 # C1_curved_elements.cc C1_curved_association_matrix.cc C1_curved_basic_basis.cc
 #---------------------------------------------------------------------------
 
 single_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
+multiple_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
+bell_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
 
 # Local sources that Jack's own code depends on: This code also uses
 # objects from Jack's own library. The source code for this library
@@ -32,4 +36,4 @@ single_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $
 # Automake will replace the variable @includedir@ with the actual
 # include directory.
 
-AM_CPPFLAGS += -I@includedir@ -Wall -g #-DRANGE_CHECKING -DPARANOID #-static# -DPURIFY -Wextra -Wuninitialized -Wpedantic #-DRANGE_CHECKING -DPARANOID
+AM_CPPFLAGS += -I@includedir@ -Wall -g -DRANGE_CHECKING -DPARANOID #-fpermissive#-static# -DPURIFY -Wextra -Wuninitialized -Wpedantic #-DRANGE_CHECKING -DPARANOID
