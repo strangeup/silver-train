@@ -89,7 +89,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 noinst_PROGRAMS = single_element_tester$(EXEEXT) \
-	multiple_element_tester$(EXEEXT) bell_element_tester$(EXEEXT)
+	multiple_element_tester$(EXEEXT) bell_element_tester$(EXEEXT) \
+	integral_tester$(EXEEXT)
 subdir = user_drivers/silver-train
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/configure.ac_scripts/automake_init_command_file \
@@ -112,6 +113,10 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+am_integral_tester_OBJECTS = integral_test.$(OBJEXT)
+integral_tester_OBJECTS = $(am_integral_tester_OBJECTS)
+integral_tester_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_multiple_element_tester_OBJECTS =  \
 	multiple_element_tester.$(OBJEXT)
 multiple_element_tester_OBJECTS =  \
@@ -155,11 +160,11 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(bell_element_tester_SOURCES) \
+SOURCES = $(bell_element_tester_SOURCES) $(integral_tester_SOURCES) \
 	$(multiple_element_tester_SOURCES) \
 	$(single_element_tester_SOURCES)
 DIST_SOURCES = $(bell_element_tester_SOURCES) \
-	$(multiple_element_tester_SOURCES) \
+	$(integral_tester_SOURCES) $(multiple_element_tester_SOURCES) \
 	$(single_element_tester_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
@@ -414,11 +419,13 @@ EXTRA_DIST = validate.sh validata
 single_element_tester_SOURCES = single_element_tester.cc 
 multiple_element_tester_SOURCES = multiple_element_tester.cc 
 bell_element_tester_SOURCES = bell_element_checker.cc 
+integral_tester_SOURCES = integral_test.cc 
 # C1_curved_elements.cc C1_curved_association_matrix.cc C1_curved_basic_basis.cc
 #---------------------------------------------------------------------------
 single_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
 multiple_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
 bell_element_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
+integral_tester_LDADD = -L@libdir@ -lgeneric -lC1_basis $(EXTERNAL_LIBS) $(FLIBS)
 all: all-am
 
 .SUFFIXES:
@@ -467,6 +474,10 @@ bell_element_tester$(EXEEXT): $(bell_element_tester_OBJECTS) $(bell_element_test
 	@rm -f bell_element_tester$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(bell_element_tester_OBJECTS) $(bell_element_tester_LDADD) $(LIBS)
 
+integral_tester$(EXEEXT): $(integral_tester_OBJECTS) $(integral_tester_DEPENDENCIES) $(EXTRA_integral_tester_DEPENDENCIES) 
+	@rm -f integral_tester$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(integral_tester_OBJECTS) $(integral_tester_LDADD) $(LIBS)
+
 multiple_element_tester$(EXEEXT): $(multiple_element_tester_OBJECTS) $(multiple_element_tester_DEPENDENCIES) $(EXTRA_multiple_element_tester_DEPENDENCIES) 
 	@rm -f multiple_element_tester$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(multiple_element_tester_OBJECTS) $(multiple_element_tester_LDADD) $(LIBS)
@@ -482,6 +493,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bell_element_checker.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/integral_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/multiple_element_tester.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/single_element_tester.Po@am__quote@
 

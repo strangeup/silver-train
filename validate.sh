@@ -5,7 +5,7 @@ OOMPH_ROOT_DIR=$(make -s --no-print-directory print-top_builddir)
 
 
 #Set the number of tests to be checked
-NUM_TESTS=3
+NUM_TESTS=4
 
 
 # Setup validation directory
@@ -81,6 +81,28 @@ if test "$1" = "no_fpdiff"; then
 else
   ../../../bin/fpdiff.py ../validata/bell_tester_result.dat.gz  \
   bell_tester_results.dat  >> validation.log
+fi
+
+# Validation for integral test
+#----------------------------
+echo "Running TGauss<2,N> validation "
+../integral_tester > OUTPUT_integral_tester
+echo "done"
+echo " " >> validation.log
+echo "Running TGauss<2,N> validation" >> validation.log
+echo "------------------------------------------" >> validation.log
+echo " " >> validation.log
+echo "Validation directory: " >> validation.log
+echo " " >> validation.log
+echo "  " `pwd` >> validation.log
+echo " " >> validation.log
+cat RESLT/trace_integral.dat > integral_tester_results.dat
+
+if test "$1" = "no_fpdiff"; then
+  echo "dummy [OK] -- Can't run fpdiff.py because we don't have python or validata" >> validation.log
+else
+  ../../../bin/fpdiff.py ../validata/integral_test_result.dat.gz  \
+  integral_tester_results.dat  >> validation.log
 fi
 
 # Append output to global validation log file
